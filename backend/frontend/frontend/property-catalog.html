@@ -9,6 +9,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="tailwind-config.js"></script>
 <link rel="stylesheet" href="style.css">
+<script src="tooltip.js"></script>
 
 <!-- PWA & App Meta Tags -->
 <link rel="manifest" href="manifest.json">
@@ -87,8 +88,12 @@
       <p>System properties database table view</p>
     </div>
     <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
-      <button onclick="exportPropertiesCSV()" class="btn btn-outline btn-sm">📥 Export CSV</button>
-      <a href="add-property.html" class="btn btn-gold btn-sm">+ Add Listing</a>
+      <button onclick="exportPropertiesCSV()" class="btn btn-outline btn-sm"
+        data-tooltip="Export all visible properties as a CSV file"
+        data-tooltip-side="bottom">📥 Export CSV</button>
+      <a href="add-property.html" class="btn btn-gold btn-sm"
+        data-tooltip="Add a new property listing"
+        data-tooltip-side="bottom">+ Add Listing</a>
     </div>
   </div>
 
@@ -121,7 +126,9 @@
     </div>
     <div class="flex justify-between items-center mt-4 pt-3 border-t border-border/40">
       <span class="text-xs text-muted-foreground">Showing <strong id="visibleCount" class="text-foreground">0</strong> of <strong id="totalCount" class="text-foreground">0</strong> listings</span>
-      <button onclick="resetFilters()" class="text-xs font-semibold text-primary underline underline-offset-4 hover:text-primary/80">Clear Filters</button>
+      <button onclick="resetFilters()" class="text-xs font-semibold text-primary underline underline-offset-4 hover:text-primary/80"
+        data-tooltip="Clear all search and filter inputs"
+        data-tooltip-side="top">Clear Filters</button>
     </div>
   </div>
 
@@ -269,9 +276,12 @@ function renderTable(list) {
         </td>
         <td class="text-right">
           <div style="display: flex; gap: 6px; justify-content: flex-end;">
-            <a href="property-detail.html?id=${cleanId}" class="btn btn-gold btn-sm" style="padding: 4px 10px; font-size: 0.75rem;">View</a>
-            <a href="add-property.html?edit=${cleanId}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.75rem;">Edit</a>
-            <button onclick="window.open('http://localhost:3001/api/properties/${cleanId}/pdf', '_blank')" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.75rem; color: var(--gold, #e6b94a); border-color: rgba(230,185,74,0.3)">PDF</button>
+            <a href="property-detail.html?id=${cleanId}" class="btn btn-gold btn-sm" style="padding: 4px 10px; font-size: 0.75rem;"
+              data-tooltip="View full property details" data-tooltip-side="top">View</a>
+            <a href="add-property.html?edit=${cleanId}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.75rem;"
+              data-tooltip="Edit this property listing" data-tooltip-side="top">Edit</a>
+            <button onclick="window.open('http://localhost:3001/api/properties/${cleanId}/pdf', '_blank')" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.75rem; color: var(--gold, #e6b94a); border-color: rgba(230,185,74,0.3)"
+              data-tooltip="Download PDF property report" data-tooltip-side="top">PDF</button>
           </div>
         </td>
       </tr>

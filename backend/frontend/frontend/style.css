@@ -1342,4 +1342,65 @@ small { font-size: 0.95rem; color: var(--text-3); }
 }
 .lightbox-close:hover { background: var(--gold); color: #000; border-color: var(--gold); transform: scale(1.1); }
 
+/* ============================================
+   TOOLTIP COMPONENT
+   Converted from SupplyWise tooltip.tsx (Base UI / Radix)
+   Uses data-tooltip="text" and optional data-tooltip-side="top|bottom|left|right"
+   ============================================ */
+
+/* Tooltip wrapper — used by tooltip.js, injected once into <body> */
+#re-tooltip-box {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  max-width: 240px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  background: var(--text, #e8e8e8);
+  color: var(--bg, #0d0d0d);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  opacity: 0;
+  transform: scale(0.92) translateY(4px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  will-change: opacity, transform;
+}
+#re-tooltip-box.tt-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+#re-tooltip-box.tt-side-bottom          { transform: scale(0.92) translateY(-4px); }
+#re-tooltip-box.tt-side-bottom.tt-visible { transform: scale(1) translateY(0); }
+#re-tooltip-box.tt-side-left             { transform: scale(0.92) translateX(4px); }
+#re-tooltip-box.tt-side-left.tt-visible  { transform: scale(1) translateX(0); }
+#re-tooltip-box.tt-side-right            { transform: scale(0.92) translateX(-4px); }
+#re-tooltip-box.tt-side-right.tt-visible { transform: scale(1) translateX(0); }
+
+#re-tooltip-arrow {
+  position: fixed;
+  z-index: 10001;
+  pointer-events: none;
+  width: 9px;
+  height: 9px;
+  background: var(--text, #e8e8e8);
+  border-radius: 2px;
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+#re-tooltip-arrow.tt-visible { opacity: 1; }
+
+/* Light mode overrides */
+[data-theme="light"] #re-tooltip-box   { background: var(--text, #212529); color: var(--text-inv, #ffffff); }
+[data-theme="light"] #re-tooltip-arrow { background: var(--text, #212529); }
+
 

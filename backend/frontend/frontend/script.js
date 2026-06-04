@@ -2443,13 +2443,14 @@ async function exportPropertiesCSV() {
   }
 }
 
-//  AUTO-START SessionGuard & Sidebar on every page 
+//  AUTO-START SessionGuard, Sidebar & Tooltips on every page
 document.addEventListener('DOMContentLoaded', async () => {
   initSidebar();
+  // Initialise tooltip system (from tooltip.js) with MutationObserver so
+  // dynamically rendered rows (property-catalog table) also get tooltips.
+  if (typeof tooltipObserver === 'function') tooltipObserver();
   const logged = await Auth.isLoggedIn();
   if (logged) {
     SessionGuard.start();
   }
 });
-
-

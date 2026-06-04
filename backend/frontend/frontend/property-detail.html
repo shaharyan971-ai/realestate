@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="tooltip.js"></script>
 
 <!-- PWA & App Meta Tags -->
 <link rel="manifest" href="manifest.json">
@@ -47,7 +48,9 @@
       <h1 id="propertyTitle">Property Details</h1>
       <p>Complete information about this listing</p>
     </div>
-    <button id="themeToggle" class="btn btn-outline btn-sm">
+    <button id="themeToggle" class="btn btn-outline btn-sm"
+      data-tooltip="Toggle dark / light mode"
+      data-tooltip-side="bottom">
       <span id="themeIcon"></span>
     </button>
   </div>
@@ -308,11 +311,15 @@ async function init() {
           <div style="display:flex;gap:10px;
             flex-wrap:wrap">
             <a href="add-property.html?edit=${property.id}"
-              class="btn btn-gold">
+              class="btn btn-gold"
+              data-tooltip="Edit this property listing"
+              data-tooltip-side="top">
                Edit Property
             </a>
             <button class="btn btn-danger"
-              onclick="deleteProp('${property.id}')">
+              onclick="deleteProp('${property.id}')"
+              data-tooltip="Permanently delete this property"
+              data-tooltip-side="top">
                Delete Property
             </button>
           </div>` : ''}
@@ -369,6 +376,8 @@ async function init() {
 
             <button class="btn btn-gold"
               style="width:100%"
+              data-tooltip="Request a callback from the property owner"
+              data-tooltip-side="left"
               onclick="contactOwner(
                 '${property.id}',
                 '${safeTitle}')">
@@ -378,6 +387,8 @@ async function init() {
             <button class="btn btn-outline"
               style="width:100%;color:#e6b94a;
                 border-color:rgba(230,185,74,0.3)"
+              data-tooltip="Send a message to the property owner"
+              data-tooltip-side="left"
               onclick="contactOwner(
                 '${property.id}',
                 '${safeTitle}')">
@@ -386,6 +397,8 @@ async function init() {
 
             <button class="btn btn-outline"
               style="width:100%;margin-top:8px;"
+              data-tooltip="Download full property PDF report"
+              data-tooltip-side="left"
               onclick="window.open('http://localhost:3001/api/properties/${property.id}/pdf', '_blank')">
                📄 Download PDF Report
             </button>
@@ -396,12 +409,16 @@ async function init() {
               <button class="btn btn-outline"
                 style="width:100%"
                 id="favBtn"
+                data-tooltip="${isFav ? 'Remove from saved favourites' : 'Save to your favourites'}"
+                data-tooltip-side="top"
                 onclick="toggleFav(
                   '${property.id}', this)">
-                ${isFav ? ' Saved' : ' Save'}
+                ${isFav ? '❤️ Saved' : '🤍 Save'}
               </button>
               <button class="btn btn-outline"
                 style="width:100%"
+                data-tooltip="Copy share link to clipboard"
+                data-tooltip-side="top"
                 onclick="shareIt()">
                  Share
               </button>
@@ -452,6 +469,8 @@ async function init() {
               </textarea>
               <button class="btn btn-gold"
                 style="width:100%"
+                data-tooltip="Submit your enquiry to the owner"
+                data-tooltip-side="top"
                 onclick="sendEnq()">
                 Send Enquiry ->
               </button>
