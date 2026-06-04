@@ -1,0 +1,17 @@
+{
+  "name": "RealEstate Premium",
+  "short_name": "RealEstate",
+  "start_url": "./home.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#FFD700",
+  "description": "Premium real estate discovery and listing platform.",
+  "icons": [
+    {
+      "src": "./icon-512.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

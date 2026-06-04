@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile - RealEstate</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-brand"> RealEstate</a>
+  <a href="index.html"><span class="nav-icon"></span> Dashboard<span class="nav-arrow"></span></a>
+  <a href="profile.html"><span class="nav-icon"></span> My Profile<span class="nav-arrow"></span></a>
+  <a href="properties.html"><span class="nav-icon"></span> My Properties<span class="nav-arrow"></span></a>
+  <a href="add-property.html"><span class="nav-icon"></span> Add Property<span class="nav-arrow"></span></a>
+  <a href="messages.html"><span class="nav-icon"></span> Messages<span class="nav-arrow"></span></a>
+  <a href="favorites.html"><span class="nav-icon"></span> Favorites<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="calculators.html"><span class="nav-icon"></span> Calculators<span class="nav-arrow"></span></a>
+  <a href="compare.html"><span class="nav-icon"></span> Compare<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="home.html"><span class="nav-icon"></span> Browse Properties<span class="nav-arrow"></span></a>
+  <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;"><span class="nav-icon"></span> Sign Out<span class="nav-arrow"></span></a>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+
+  <div class="page-header">
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <div>
+      <h1>My Profile</h1>
+      <p>Update your profile information</p>
+    </div>
+  </div>
+
+  <div class="profile-layout">
+
+    <!-- Profile sidebar card -->
+    <div class="profile-sidebar-card">
+      <div class="profile-pic-wrap">
+        <img src="https://ui-avatars.com/api/?background=FFD700&color=000&size=110&bold=true&name=User" alt="Profile" class="profile-pic" id="profilePicDisplay">
+        <label for="imageUploadInput" class="pic-upload-btn" title="Upload photo"></label>
+        <input type="file" id="imageUploadInput" accept="image/jpeg,image/png,image/webp">
+      </div>
+
+      <div class="profile-name" id="displayName">Loading...</div>
+      <div class="profile-email" id="displayEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="600c0f0104090e0720050d01090c4e030f0d">[email&#160;protected]</a></div>
+      <div class="profile-joined" id="displayJoined">Joined...</div>
+
+      <div style="margin-top:20px; display:flex; flex-direction:column; gap:8px; width:100%;">
+        <a href="properties.html" class="btn btn-outline btn-sm btn-full"> My Properties</a>
+        <a href="add-property.html" class="btn btn-gold btn-sm btn-full">+ Add Property</a>
+      </div>
+    </div>
+
+    <!-- Profile form -->
+    <div class="profile-form-card">
+      <h3>Personal Information</h3>
+
+      <form id="profileForm" novalidate>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="profNameInput" placeholder="Aapka pura naam">
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="profEmailInput" readonly style="opacity:0.6; cursor:not-allowed;" title="Email address cannot be changed">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" id="profPhoneInput" placeholder="10-digit mobile number" maxlength="10">
+          </div>
+          <div class="form-group">
+            <label>City</label>
+            <input type="text" id="profCityInput" placeholder="Aapka shahar">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Full Address</label>
+          <textarea id="profAddressInput" placeholder="Enter your address..." rows="3"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>About Me</label>
+          <textarea id="profBioInput" placeholder="Write a short bio about yourself..." rows="3"></textarea>
+        </div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button type="submit" class="btn btn-gold" id="saveProfileBtn"> Save Profile</button>
+          <button type="button" class="btn btn-outline" onclick="loadProfile()"> Reset</button>
+        </div>
+      </form>
+
+      <!-- Change Password Section -->
+      <div style="margin-top:36px; padding-top:24px; border-top:1px solid var(--border);">
+        <h3 style="margin-bottom:20px;"> Change Password</h3>
+        <form id="passwordForm" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Purana Password</label>
+              <input type="password" id="oldPass" placeholder="Purana password">
+            </div>
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" id="newPass" placeholder="Enter new password">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="confirmPass" placeholder="Confirm new password">
+          </div>
+          <button type="submit" class="btn btn-outline"> Update Password</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+async function checkAuth() {
+  const logged = await Auth.isLoggedIn();
+  if (!logged) {
+    window.location.href = 'login.html';
+  } else {
+    await loadProfile();
+  }
+}
+
+async function loadProfile() {
+  const user = await Auth.getUser();
+  if (!user) return;
+
+  // Set display info
+  document.getElementById('displayName').textContent = user.full_name || 'User';
+  document.getElementById('displayEmail').textContent = user.email || '';
+  document.getElementById('displayJoined').textContent = 'Joined: ' + (user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Today');
+
+  // Set profile pic
+  if (user.photo_url) {
+    document.getElementById('profilePicDisplay').src = user.photo_url;
+  } else {
+    const initials = (user.full_name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    document.getElementById('profilePicDisplay').src = `https://ui-avatars.com/api/?background=FFD700&color=000&size=110&bold=true&name=${encodeURIComponent(initials)}`;
+  }
+
+  // Fill form
+  document.getElementById('profNameInput').value = user.full_name || '';
+  document.getElementById('profEmailInput').value = user.email || '';
+  document.getElementById('profPhoneInput').value = user.phone || '';
+  document.getElementById('profCityInput').value = user.city || '';
+  document.getElementById('profAddressInput').value = user.address || '';
+  document.getElementById('profBioInput').value = user.bio || '';
+}
+
+// Photo upload
+document.getElementById('imageUploadInput').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowed.includes(file.type)) {
+    showToast('Only JPG, PNG or WebP images are allowed', 'error');
+    return;
+  }
+
+  if (file.size > 3 * 1024 * 1024) {
+    showToast('Image must be smaller than 3MB', 'error');
+    return;
+  }
+
+  showSpinner();
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    // Compress image
+    const img = new Image();
+    img.onload = async function () {
+      const canvas = document.createElement('canvas');
+      const maxSize = 400;
+      let { width, height } = img;
+
+      if (width > height && width > maxSize) {
+        height = (height * maxSize) / width;
+        width = maxSize;
+      } else if (height > maxSize) {
+        width = (width * maxSize) / height;
+        height = maxSize;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+
+      const compressed = canvas.toDataURL('image/jpeg', 0.75);
+      document.getElementById('profilePicDisplay').src = compressed;
+
+      // Save to Supabase
+      const updated = await Store.updateProfile({ photo_url: compressed });
+
+      hideSpinner();
+      if (updated) showToast('Photo upload ho gayi! ', 'success');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Profile form submit
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const name = sanitize(document.getElementById('profNameInput').value.trim());
+  const phone = document.getElementById('profPhoneInput').value.trim();
+  let valid = true;
+
+  if (name.length < 2) {
+    showError(document.getElementById('profNameInput'), 'Name must be at least 2 characters');
+    valid = false;
+  } else clearError(document.getElementById('profNameInput'));
+
+  if (phone && !validatePhone(phone)) {
+    showError(document.getElementById('profPhoneInput'), 'Please enter a valid 10-digit mobile number');
+    valid = false;
+  } else clearError(document.getElementById('profPhoneInput'));
+
+  if (!valid) return;
+
+  const btn = document.getElementById('saveProfileBtn');
+  btn.textContent = ' Saving...';
+  btn.disabled = true;
+
+  const updated = await Store.updateProfile({
+    full_name: name,
+    phone: phone,
+    city: sanitize(document.getElementById('profCityInput').value.trim()),
+    address: sanitize(document.getElementById('profAddressInput').value.trim()),
+    bio: sanitize(document.getElementById('profBioInput').value.trim())
+  });
+
+  if (updated) {
+    document.getElementById('displayName').textContent = name;
+    document.getElementById('welcomeMsg') && (document.getElementById('welcomeMsg').textContent = `Welcome, ${name} `);
+
+    // Button animation
+    btn.textContent = ' Saved!';
+    setTimeout(() => { btn.textContent = ' Save Profile'; btn.disabled = false; }, 2000);
+
+    showToast('Profile save ho gayi! ', 'success');
+  } else {
+    btn.textContent = ' Save Profile';
+    btn.disabled = false;
+  }
+});
+
+// Change Password - Supabase Auth method
+document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const newPass    = document.getElementById('newPass').value;
+  const confirmPass = document.getElementById('confirmPass').value;
+
+  const passErr = validatePassword(newPass);
+  if (passErr) {
+    showError(document.getElementById('newPass'), passErr);
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    showError(document.getElementById('confirmPass'), 'Passwords do not match');
+    return;
+  }
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+
+  try {
+    let updatedOnline = false;
+    if (typeof sb !== 'undefined' && sb) {
+      try {
+        const { error } = await sb.auth.updateUser({ password: newPass });
+        if (error) throw error;
+        updatedOnline = true;
+      } catch (err) {
+        if (!isNetworkError(err)) {
+          throw err;
+        }
+      }
+    }
+
+    // Also update offline profile in localStorage if available
+    try {
+      const user = Auth.currentUser || await Auth.getUser();
+      if (user && user.email) {
+        let users = [];
+        try { users = JSON.parse(localStorage.getItem('re_users') || '[]'); } catch(e) { users = []; }
+        const userIndex = users.findIndex(u => u.email === user.email);
+        if (userIndex !== -1) {
+          const hashed = await hashPassword(newPass);
+          users[userIndex].passwordHash = hashed;
+          localStorage.setItem('re_users', JSON.stringify(users));
+          // If offline mode is active, update mock session as well
+          const offSess = localStorage.getItem('sb_offline_session');
+          if (offSess) {
+            const sess = JSON.parse(offSess);
+            if (sess && sess.user && sess.user.email === user.email) {
+              sess.user.passwordHash = hashed;
+              localStorage.setItem('sb_offline_session', JSON.stringify(sess));
+            }
+          }
+        }
+      }
+    } catch(e) {
+      console.warn("Failed to update offline password backup:", e);
+    }
+
+    document.getElementById('passwordForm').reset();
+    showToast('Password changed successfully! 🎉', 'success');
+  } catch(err) {
+    console.error('Password Update Error:', err);
+    showError(document.getElementById('newPass'), err.message || 'Could not update password');
+    showToast('Could not update password', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Update Password'; }
+  }
+});
+
+checkAuth();
+
+
+// Clipboard protection on confirm password field
+ClipboardGuard.protect('confirmPass');
+
+// Add Security Center button to page
+(function() {
+  const secBtn = document.createElement('button');
+  secBtn.onclick = showSecurityDashboard;
+  secBtn.style.cssText = 'position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#1a1200,#2a1f00);border:1px solid rgba(230,185,74,0.3);color:#e6b94a;padding:10px 16px;border-radius:50px;cursor:pointer;font-size:13px;font-weight:600;z-index:1000;box-shadow:0 4px 20px rgba(0,0,0,0.4);display:flex;align-items:center;gap:6px;';
+  secBtn.innerHTML = ' Security Center';
+  secBtn.addEventListener('mouseenter', function() { this.style.background = 'linear-gradient(135deg,#2a1f00,#3a2d00)'; });
+  secBtn.addEventListener('mouseleave', function() { this.style.background = 'linear-gradient(135deg,#1a1200,#2a1f00)'; });
+  document.body.appendChild(secBtn);
+})();
+</script>
+</body>
+</html>

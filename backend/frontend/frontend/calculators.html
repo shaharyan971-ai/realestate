@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Calculators - RealEstate</title>
+    
+<!-- Tailwind CDN & Custom config for shadcn design variables -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="tailwind-config.js"></script>
+<link rel="stylesheet" href="style.css">
+    <style>
+        .calc-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .calc-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .calc-tab {
+            padding: 10px 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            color: var(--text-2);
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: var(--t);
+        }
+        .calc-tab.active {
+            background: var(--gold-soft);
+            border-color: var(--gold-border);
+            color: var(--gold);
+        }
+        .calc-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 30px;
+            animation: fadeUp 0.4s ease;
+        }
+        .calc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        @media (max-width: 768px) {
+            .calc-grid { grid-template-columns: 1fr; }
+        }
+        .result-panel {
+            background: var(--bg2);
+            border-radius: var(--r);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .result-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--gold);
+            margin: 10px 0;
+            font-family: 'DM Mono', monospace;
+        }
+        .result-label {
+            font-size: 0.9rem;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .input-range-wrap {
+            margin-top: 10px;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            background: var(--border);
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            margin: 15px 0;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--gold);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: var(--t);
+        }
+        .calc-section { display: none; }
+        .calc-section.active { display: block; }
+        
+        .summary-item {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .summary-item:last-child { border-bottom: none; }
+    </style>
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <a href="home.html" class="sidebar-brand"> RealEstate</a>
+    <a href="index.html"><span class="nav-icon"></span> Dashboard<span class="nav-arrow"></span></a>
+    <a href="profile.html"><span class="nav-icon"></span> My Profile<span class="nav-arrow"></span></a>
+    <a href="properties.html"><span class="nav-icon"></span> My Properties<span class="nav-arrow"></span></a>
+    <a href="add-property.html"><span class="nav-icon"></span> Add Property<span class="nav-arrow"></span></a>
+    <a href="messages.html"><span class="nav-icon"></span> Messages<span class="nav-arrow"></span></a>
+    <a href="favorites.html"><span class="nav-icon"></span> Favorites<span class="nav-arrow"></span></a>
+    <div class="sidebar-divider"></div>
+    <a href="calculators.html" class="active-link"><span class="nav-icon"></span> Calculators<span class="nav-arrow"></span></a>
+    <a href="compare.html"><span class="nav-icon"></span> Compare<span class="nav-arrow"></span></a>
+    <a href="home.html"><span class="nav-icon"></span> Browse Properties<span class="nav-arrow"></span></a>
+    <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;"><span class="nav-icon"></span> Logout<span class="nav-arrow"></span></a>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+    <div class="page-header">
+        <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+        <div style="flex:1;">
+            <h1>Real Estate Calculators</h1>
+            <p>Plan your finances with accuracy</p>
+        </div>
+        <button id="themeToggle" class="btn btn-outline btn-sm">
+            <span id="themeIcon"></span>
+        </button>
+    </div>
+
+    <div class="calc-container">
+        <div class="calc-tabs" id="calcTabs">
+            <div class="calc-tab active" data-target="emi">EMI Calculator</div>
+            <div class="calc-tab" data-target="affordability">Affordability</div>
+            <div class="calc-tab" data-target="stamp">Stamp Duty</div>
+            <div class="calc-tab" data-target="rentbuy">Rent vs Buy</div>
+        </div>
+
+        <div class="calc-card">
+            <!-- EMI CALCULATOR -->
+            <div id="emi" class="calc-section active">
+                <div class="calc-grid">
+                    <div class="inputs">
+                        <div class="form-group">
+                            <label>Loan Amount (Rs. )</label>
+                            <input type="number" id="emiAmount" value="5000000" step="100000">
+                            <input type="range" min="100000" max="100000000" step="100000" value="5000000" oninput="syncInput('emiAmount', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Interest Rate (%)</label>
+                            <input type="number" id="emiRate" value="8.5" step="0.1">
+                            <input type="range" min="5" max="20" step="0.1" value="8.5" oninput="syncInput('emiRate', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Tenure (Years)</label>
+                            <input type="number" id="emiTenure" value="20">
+                            <input type="range" min="1" max="30" step="1" value="20" oninput="syncInput('emiTenure', this.value)">
+                        </div>
+                    </div>
+                    <div class="results">
+                        <div class="result-panel">
+                            <span class="result-label">Monthly EMI</span>
+                            <div class="result-value" id="emiResult">Rs. 43,391</div>
+                            <div class="summary-item">
+                                <span>Principal Amount</span>
+                                <span id="emiPrincipal">Rs. 50.00 L</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Interest</span>
+                                <span id="emiInterest">Rs. 54.14 L</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Payment</span>
+                                <span id="emiTotal">Rs. 1.04 Cr</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AFFORDABILITY CALCULATOR -->
+            <div id="affordability" class="calc-section">
+                <div class="calc-grid">
+                    <div class="inputs">
+                        <div class="form-group">
+                            <label>Gross Monthly Income (Rs. )</label>
+                            <input type="number" id="affIncome" value="150000" step="5000">
+                            <input type="range" min="20000" max="1000000" step="5000" value="150000" oninput="syncInput('affIncome', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Existing EMI Obligations (Rs. )</label>
+                            <input type="number" id="affObligation" value="0" step="1000">
+                            <input type="range" min="0" max="500000" step="1000" value="0" oninput="syncInput('affObligation', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Down Payment Saved (Rs. )</label>
+                            <input type="number" id="affDown" value="1000000" step="50000">
+                            <input type="range" min="0" max="20000000" step="50000" value="1000000" oninput="syncInput('affDown', this.value)">
+                        </div>
+                    </div>
+                    <div class="results">
+                        <div class="result-panel">
+                            <span class="result-label">You can afford a home up to</span>
+                            <div class="result-value" id="affResult">Rs. 78.25 L</div>
+                            <div class="summary-item">
+                                <span>Recommended EMI</span>
+                                <span id="affRecommendedEMI">Rs. 60,000</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Max Loan Amount</span>
+                                <span id="affLoan">Rs. 68.25 L</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STAMP DUTY CALCULATOR -->
+            <div id="stamp" class="calc-section">
+                <div class="calc-grid">
+                    <div class="inputs">
+                        <div class="form-group">
+                            <label>Property Value (Rs. )</label>
+                            <input type="number" id="stampValue" value="10000000" step="100000">
+                            <input type="range" min="500000" max="200000000" step="100000" value="10000000" oninput="syncInput('stampValue', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>State / Region</label>
+                            <select id="stampState" onchange="calculateStamp()">
+                                <option value="6">Maharashtra (6%)</option>
+                                <option value="5">Karnataka (5%)</option>
+                                <option value="7">Delhi (7%)</option>
+                                <option value="6.5">Tamil Nadu (6.5%)</option>
+                                <option value="6">Telangana (6%)</option>
+                                <option value="5">Gujarat (5%)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Gender of Owner</label>
+                            <div style="display:flex; gap:10px; margin-top:5px;">
+                                <label style="text-transform:none; font-size:0.85rem; color:var(--text); cursor:pointer">
+                                    <input type="radio" name="gender" value="male" checked onchange="calculateStamp()"> Male
+                                </label>
+                                <label style="text-transform:none; font-size:0.85rem; color:var(--text); cursor:pointer">
+                                    <input type="radio" name="gender" value="female" onchange="calculateStamp()"> Female (-1%)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="results">
+                        <div class="result-panel">
+                            <span class="result-label">Total Stamp Duty & Fees</span>
+                            <div class="result-value" id="stampResult">Rs. 6,30,000</div>
+                            <div class="summary-item">
+                                <span>Stamp Duty</span>
+                                <span id="stampDutyOnly">Rs. 6,00,000</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Registration Fee</span>
+                                <span id="stampReg">Rs. 30,000</span>
+                            </div>
+                            <div class="summary-item">
+                                <span>Total Outflow</span>
+                                <span id="stampTotal">Rs. 1.06 Cr</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RENT VS BUY -->
+            <div id="rentbuy" class="calc-section">
+                <div class="calc-grid">
+                    <div class="inputs">
+                        <div class="form-group">
+                            <label>Property Price (Rs. )</label>
+                            <input type="number" id="rbPrice" value="8000000">
+                        </div>
+                        <div class="form-group">
+                            <label>Monthly Rent (Rs. )</label>
+                            <input type="number" id="rbRent" value="25000">
+                        </div>
+                        <div class="form-group">
+                            <label>Appreciation Rate (% p.a.)</label>
+                            <input type="number" id="rbAppr" value="5">
+                        </div>
+                    </div>
+                    <div class="results">
+                        <div class="result-panel">
+                            <span class="result-label">The Verdict</span>
+                            <div class="result-value" id="rbVerdict" style="font-size:1.4rem">Buying is better!</div>
+                            <p style="font-size:0.8rem; margin-top:10px; color:var(--text-3)">Calculated over a 10-year horizon considering asset growth vs rental outflow.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+    let currentUser = null;
+    async function init() {
+        currentUser = await Auth.getUser();
+        if (!currentUser) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.style.display = 'block';
+            logoutBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await Auth.signOut();
+                window.location.href = 'login.html';
+            });
+        }
+    }
+
+    // Theme Toggle Logic
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const html = document.documentElement;
+    
+    const savedTheme = localStorage.getItem('re_theme') || 'dark';
+    html.setAttribute('data-theme', savedTheme);
+    if(themeIcon) themeIcon.textContent = savedTheme === 'dark' ? '' : '';
+
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', newTheme);
+        themeIcon.textContent = newTheme === 'dark' ? '' : '';
+        localStorage.setItem('re_theme', newTheme);
+    });
+
+    // Tab Logic
+    const tabs = document.querySelectorAll('.calc-tab');
+    const sections = document.querySelectorAll('.calc-section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+            
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.target).classList.add('active');
+        });
+    });
+    // Helper: Sync Input and Range
+    function syncInput(id, val) {
+        const input = document.getElementById(id);
+        input.value = val;
+        
+        // Trigger calculation based on which input changed
+        if (id.startsWith('emi')) calculateEMI();
+        if (id.startsWith('aff')) calculateAffordability();
+        if (id.startsWith('stamp')) calculateStamp();
+    }
+
+    // Attach event listeners to all number inputs for instant calc
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('input', (e) => {
+            const range = e.target.nextElementSibling;
+            if (range && range.type === 'range') range.value = e.target.value;
+            
+            if (e.target.id.startsWith('emi')) calculateEMI();
+            if (e.target.id.startsWith('aff')) calculateAffordability();
+            if (e.target.id.startsWith('stamp')) calculateStamp();
+            if (e.target.id.startsWith('rb')) calculateRentBuy();
+        });
+    });
+
+    // Formatting
+    function formatInd(n) {
+        if (n >= 10000000) return 'Rs. ' + (n / 10000000).toFixed(2) + ' Cr';
+        if (n >= 100000) return 'Rs. ' + (n / 100000).toFixed(2) + ' L';
+        return 'Rs. ' + Math.round(n).toLocaleString('en-IN');
+    }
+
+    // EMI Calculation
+    function calculateEMI() {
+        const p = parseFloat(document.getElementById('emiAmount').value) || 0;
+        const r = (parseFloat(document.getElementById('emiRate').value) / 12) / 100;
+        const n = (parseFloat(document.getElementById('emiTenure').value) || 0) * 12;
+
+        if (p > 0 && r > 0 && n > 0) {
+            const emi = p * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+            const total = emi * n;
+            const interest = total - p;
+
+            document.getElementById('emiResult').textContent = 'Rs. ' + Math.round(emi).toLocaleString('en-IN');
+            document.getElementById('emiPrincipal').textContent = formatInd(p);
+            document.getElementById('emiInterest').textContent = formatInd(interest);
+            document.getElementById('emiTotal').textContent = formatInd(total);
+        }
+    }
+
+    // Affordability Calculation
+    function calculateAffordability() {
+        const income = parseFloat(document.getElementById('affIncome').value) || 0;
+        const obligation = parseFloat(document.getElementById('affObligation').value) || 0;
+        const down = parseFloat(document.getElementById('affDown').value) || 0;
+        
+        const emiAvailable = (income * 0.45) - obligation; // Assuming 45% FOIR
+        const r = (8.5 / 12) / 100; // Fixed 8.5% for affordability
+        const n = 20 * 12; // Fixed 20 years
+        
+        if (emiAvailable > 0) {
+            const loan = emiAvailable * (Math.pow(1 + r, n) - 1) / (r * Math.pow(1 + r, n));
+            const totalPropery = loan + down;
+            
+            document.getElementById('affResult').textContent = formatInd(totalPropery);
+            document.getElementById('affRecommendedEMI').textContent = 'Rs. ' + Math.round(emiAvailable).toLocaleString('en-IN');
+            document.getElementById('affLoan').textContent = formatInd(loan);
+        } else {
+            document.getElementById('affResult').textContent = "Rs. 0";
+        }
+    }
+
+    // Stamp Duty Calculation
+    function calculateStamp() {
+        const val = parseFloat(document.getElementById('stampValue').value) || 0;
+        let rate = parseFloat(document.getElementById('stampState').value) || 0;
+        const gender = document.querySelector('input[name="gender"]:checked').value;
+        
+        if (gender === 'female') rate -= 1;
+        
+        const duty = val * (rate / 100);
+        const reg = Math.min(duty * 0.05, 30000); // Typical cap
+        const total = duty + reg;
+        
+        document.getElementById('stampResult').textContent = 'Rs. ' + Math.round(total).toLocaleString('en-IN');
+        document.getElementById('stampDutyOnly').textContent = 'Rs. ' + Math.round(duty).toLocaleString('en-IN');
+        document.getElementById('stampReg').textContent = 'Rs. ' + Math.round(reg).toLocaleString('en-IN');
+        document.getElementById('stampTotal').textContent = formatInd(val + total);
+    }
+
+    // Rent vs Buy Calculation
+    function calculateRentBuy() {
+        const price = parseFloat(document.getElementById('rbPrice').value) || 0;
+        const rent = parseFloat(document.getElementById('rbRent').value) || 0;
+        const appr = parseFloat(document.getElementById('rbAppr').value) || 0;
+        
+        const totalRent = rent * 12 * 10 * 1.05; // 5% rent hike p.a. approx
+        const finalValue = price * Math.pow(1 + (appr/100), 10);
+        
+        if (finalValue - price > totalRent) {
+            document.getElementById('rbVerdict').textContent = "Buying is better!";
+            document.getElementById('rbVerdict').style.color = "var(--gold)";
+        } else {
+            document.getElementById('rbVerdict').textContent = "Renting is better!";
+            document.getElementById('rbVerdict').style.color = "#c0392b";
+        }
+    }
+
+    // Initial Calcs
+    calculateEMI();
+    calculateAffordability();
+    calculateStamp();
+    calculateRentBuy();
+
+    init();
+
+</script>
+</body>
+</html>

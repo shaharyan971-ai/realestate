@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - RealEstate</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ── Dashboard-specific enhancements ─────────────────── */
+.dash-hero {
+  background: linear-gradient(135deg, rgba(255,215,0,0.06) 0%, rgba(255,100,0,0.04) 100%);
+  border: 1px solid rgba(255,215,0,0.1);
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.dash-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,215,0,0.08), transparent 70%);
+  pointer-events: none;
+}
+.dash-hero-avatar {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #000;
+  flex-shrink: 0;
+  box-shadow: 0 4px 20px rgba(255,215,0,0.35);
+}
+.dash-hero-info h1 { font-size: 1.35rem; font-weight: 800; margin: 0 0 4px; }
+.dash-hero-info p  { font-size: 0.83rem; color: #666; margin: 0; }
+
+/* ── Quick action buttons ─────────────────────────────── */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.qa-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 18px 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,215,0,0.1);
+  border-radius: 14px;
+  cursor: pointer; text-decoration: none;
+  transition: all 0.22s;
+  color: #aaa; font-size: 0.8rem; font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+}
+.qa-btn .qa-icon { font-size: 26px; }
+.qa-btn:hover {
+  background: rgba(255,215,0,0.07);
+  border-color: rgba(255,215,0,0.3);
+  color: #FFD700; transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255,215,0,0.1);
+}
+
+/* ── Property card mini tweaks ────────────────────────── */
+.dash-prop-card-wrap { display: flex; flex-direction: column; gap: 0; }
+
+/* ── Offline notice banner ────────────────────────────── */
+.offline-notice {
+  display: none;
+  background: rgba(230,185,74,0.07);
+  border: 1px solid rgba(230,185,74,0.2);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  color: #888;
+  margin-bottom: 18px;
+  text-align: center;
+}
+.offline-notice.show { display: block; }
+.offline-notice a { color: #FFD700; text-decoration: none; font-weight: 600; }
+.offline-notice a:hover { text-decoration: underline; }
+
+/* ── Inline sample property cards (for offline mode) ─── */
+.sample-prop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+.sample-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,215,0,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.25s;
+  cursor: pointer;
+}
+.sample-card:hover {
+  border-color: rgba(255,215,0,0.25);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+.sample-card img {
+  width: 100%; height: 175px; object-fit: cover; display: block;
+}
+.sample-card-body { padding: 14px; }
+.sample-card-badge {
+  display: inline-block;
+  padding: 2px 9px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.badge-sale { background: rgba(255,215,0,0.15); color: #FFD700; }
+.badge-rent { background: rgba(79,172,254,0.15); color: #4facfe; }
+.sample-card-body h3 {
+  font-size: 0.95rem; font-weight: 700; margin: 0 0 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sample-card-loc { font-size: 0.78rem; color: #666; margin-bottom: 8px; }
+.sample-card-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.sample-card-meta span { font-size: 0.75rem; color: #777; }
+.sample-card-price { font-size: 1.05rem; font-weight: 800; color: #FFD700; margin-bottom: 10px; }
+.sample-card-btn {
+  display: inline-block; padding: 7px 16px;
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  border-radius: 8px; color: #000; font-size: 12px;
+  font-weight: 700; text-decoration: none; border: none;
+  cursor: pointer; transition: all 0.2s;
+  font-family: 'Outfit', sans-serif;
+}
+.sample-card-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(255,215,0,0.35); }
+.deal-tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; flex-shrink: 0; align-self: flex-start;
+}
+.deal-great { background: rgba(34,197,94,0.15); color: #22c55e; }
+.deal-fair  { background: rgba(230,185,74,0.15); color: #e6b94a; }
+.deal-over  { background: rgba(239,68,68,0.15); color: #ef4444; }
+</style>
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-brand">🏠 RealEstate</a>
+
+  <a href="index.html">
+    <span class="nav-icon">📊</span> Dashboard
+    <span class="nav-arrow">›</span>
+  </a>
+  <a href="profile.html">
+    <span class="nav-icon">👤</span> My Profile
+    <span class="nav-arrow">›</span>
+  </a>
+  <a href="properties.html">
+    <span class="nav-icon">🏘️</span> My Properties
+    <span class="nav-arrow">›</span>
+  </a>
+  <a href="add-property.html">
+    <span class="nav-icon">➕</span> Add Property
+    <span class="nav-arrow">›</span>
+  </a>
+  <a href="messages.html">
+    <span class="nav-icon">💬</span> Messages
+    <span class="nav-arrow">›</span>
+  </a>
+  <a href="favorites.html">
+    <span class="nav-icon">❤️</span> Favorites
+    <span class="nav-arrow">›</span>
+  </a>
+
+  <div class="sidebar-divider"></div>
+
+  <a href="calculators.html">
+    <span class="nav-icon">🧮</span> Calculators
+    <span class="nav-arrow">›</span>
+  </a>
+  <a href="compare.html">
+    <span class="nav-icon">⚖️</span> Compare
+    <span class="nav-arrow">›</span>
+  </a>
+
+  <div class="sidebar-divider"></div>
+
+  <a href="home.html">
+    <span class="nav-icon">🔍</span> Browse Properties
+    <span class="nav-arrow">›</span>
+  </a>
+  <a href="#" onclick="showSecurityDashboard();return false;">
+    <span class="nav-icon">🛡️</span> Security Center
+    <span class="nav-arrow">›</span>
+  </a>
+  <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;">
+    <span class="nav-icon">🚪</span> Sign Out
+    <span class="nav-arrow">›</span>
+  </a>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+    <div style="flex:1;">
+      <h1 id="welcomeMsg">Dashboard</h1>
+      <p id="welcomeSub" style="color:#666;font-size:0.82rem;margin:0;">Your real estate command center</p>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <button id="themeToggle" class="btn btn-outline btn-sm" title="Toggle Theme" style="padding:6px 10px;font-size:16px;">🌙</button>
+      <a href="add-property.html" class="btn btn-gold btn-sm" style="white-space:nowrap;">+ Add Property</a>
+    </div>
+  </div>
+
+  <!-- HERO GREETING -->
+  <div class="dash-hero">
+    <div class="dash-hero-avatar" id="heroAvatar">👤</div>
+    <div class="dash-hero-info">
+      <h1 id="heroGreeting">Welcome back! 👋</h1>
+      <p id="heroSub">Find your perfect property or manage your listings below.</p>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid" id="statsGrid">
+    <a href="properties.html" class="stat-box">
+      <span class="stat-icon">🏘️</span>
+      <span class="stat-value" id="statProperties">0</span>
+      <span class="stat-label">My Properties</span>
+    </a>
+    <a href="favorites.html" class="stat-box">
+      <span class="stat-icon">❤️</span>
+      <span class="stat-value" id="statFavorites">0</span>
+      <span class="stat-label">Favorites</span>
+    </a>
+    <a href="messages.html" class="stat-box">
+      <span class="stat-icon">💬</span>
+      <span class="stat-value" id="statMessages">3</span>
+      <span class="stat-label">Messages</span>
+    </a>
+    <a href="home.html" class="stat-box">
+      <span class="stat-icon">🔍</span>
+      <span class="stat-value">Browse</span>
+      <span class="stat-label">Find Properties</span>
+    </a>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="quick-actions">
+    <a href="add-property.html" class="qa-btn">
+      <span class="qa-icon">📋</span>List a Property
+    </a>
+    <a href="calculators.html" class="qa-btn">
+      <span class="qa-icon">🧮</span>EMI Calculator
+    </a>
+    <a href="compare.html" class="qa-btn">
+      <span class="qa-icon">⚖️</span>Compare Homes
+    </a>
+    <a href="favorites.html" class="qa-btn">
+      <span class="qa-icon">❤️</span>My Favourites
+    </a>
+    <a href="messages.html" class="qa-btn">
+      <span class="qa-icon">💬</span>Messages
+    </a>
+    <a href="profile.html" class="qa-btn">
+      <span class="qa-icon">⚙️</span>Edit Profile
+    </a>
+  </div>
+
+  <!-- OFFLINE NOTICE -->
+  <div class="offline-notice" id="offlineNotice">
+    🛠 <strong>Demo Mode</strong> – No database connected. Showing sample properties.
+    <a href="#" onclick="showSetupModal()">Set up Supabase</a> to enable real data.
+  </div>
+
+  <!-- FEATURED LISTINGS -->
+  <h2 class="section-title">🏠 Latest Listings</h2>
+
+  <div class="filter-tabs" id="filterTabs">
+    <button class="filter-tab active" data-filter="all">All</button>
+    <button class="filter-tab" data-filter="Sale">For Sale</button>
+    <button class="filter-tab" data-filter="Rent">For Rent</button>
+  </div>
+
+  <!-- Live grid (Supabase) -->
+  <div class="cards-grid" id="propertiesGrid" style="display:none;">
+    <!-- Loaded dynamically -->
+  </div>
+
+  <!-- Fallback demo grid (offline / no DB) -->
+  <div class="sample-prop-grid" id="demoGrid">
+    <!-- Demo cards are rendered by JS below -->
+  </div>
+
+</div><!-- /main -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+// ================================================================
+// DEMO PROPERTIES – shown when no Supabase connection available
+// ================================================================
+const DEMO_PROPS = [
+  {
+    id: 'demo1', title: '3 BHK Sea View Apartment', listingType: 'Sale',
+    category: 'Apartment', location: 'Bandra West, Mumbai',
+    price: 12500000, bedrooms: 3, bathrooms: 2, area: 1450,
+    dealScore: 'Fair Price',
+    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600'
+  },
+  {
+    id: 'demo2', title: 'Luxurious 4 BHK Villa', listingType: 'Sale',
+    category: 'Villa', location: 'Whitefield, Bangalore',
+    price: 18000000, bedrooms: 4, bathrooms: 4, area: 3200,
+    dealScore: 'Great Deal',
+    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600'
+  },
+  {
+    id: 'demo3', title: 'Cozy 2 BHK Apartment', listingType: 'Rent',
+    category: 'Apartment', location: 'Koregaon Park, Pune',
+    price: 35000, bedrooms: 2, bathrooms: 2, area: 1100,
+    dealScore: 'Great Deal',
+    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600'
+  },
+  {
+    id: 'demo4', title: 'Modern Studio Apartment', listingType: 'Rent',
+    category: 'Apartment', location: 'Connaught Place, Delhi',
+    price: 28000, bedrooms: 1, bathrooms: 1, area: 620,
+    dealScore: 'Fair Price',
+    image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600'
+  },
+  {
+    id: 'demo5', title: 'Spacious 3 BHK Independent House', listingType: 'Sale',
+    category: 'House', location: 'Jubilee Hills, Hyderabad',
+    price: 9500000, bedrooms: 3, bathrooms: 3, area: 2200,
+    dealScore: 'Great Deal',
+    image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600'
+  },
+  {
+    id: 'demo6', title: 'Penthouse with Terrace', listingType: 'Sale',
+    category: 'Apartment', location: 'Worli, Mumbai',
+    price: 45000000, bedrooms: 4, bathrooms: 4, area: 5200,
+    dealScore: 'Overpriced',
+    image: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=600'
+  },
+  {
+    id: 'demo7', title: 'Fully Furnished 3 BHK', listingType: 'Rent',
+    category: 'Apartment', location: 'DLF Phase 2, Gurgaon',
+    price: 55000, bedrooms: 3, bathrooms: 3, area: 1800,
+    dealScore: 'Fair Price',
+    image: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600'
+  },
+  {
+    id: 'demo8', title: 'Budget 2 BHK Society Flat', listingType: 'Sale',
+    category: 'Apartment', location: 'Salt Lake, Kolkata',
+    price: 4800000, bedrooms: 2, bathrooms: 2, area: 1050,
+    dealScore: 'Great Deal',
+    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600'
+  }
+];
+
+// ── Format price helper ────────────────────────────────────────────
+function fmtPrice(n) {
+  n = parseFloat(n);
+  if (isNaN(n)) return '₹0';
+  if (n >= 10000000) return '₹' + (n/10000000).toFixed(2) + ' Cr';
+  if (n >= 100000)   return '₹' + (n/100000).toFixed(1) + ' L';
+  return '₹' + n.toLocaleString('en-IN') + '/mo';
+}
+
+// ── Render one demo card ───────────────────────────────────────────
+function renderDemoCard(p) {
+  const badgeCls   = p.listingType === 'Rent' ? 'badge-rent' : 'badge-sale';
+  const dealCls    = p.dealScore === 'Great Deal' ? 'deal-great' : p.dealScore === 'Overpriced' ? 'deal-over' : 'deal-fair';
+  const bedsHtml   = p.bedrooms > 0 ? `<span>🛏 ${p.bedrooms} BHK</span>` : '';
+  const bathHtml   = p.bathrooms   ? `<span>🚿 ${p.bathrooms} Bath</span>` : '';
+  const dealHtml   = p.dealScore   ? `<span class="deal-tag ${dealCls}">${p.dealScore}</span>` : '';
+
+  return `
+    <div class="sample-card" onclick="window.location.href='property-detail?id=${p.id}'">
+      <div style="position:relative;">
+        <img src="${p.image}" alt="${p.title}"
+             onerror="this.src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600'">
+        <span class="sample-card-badge ${badgeCls}" style="position:absolute;top:10px;left:10px;">${p.listingType}</span>
+      </div>
+      <div class="sample-card-body">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <h3 style="flex:1;margin-right:8px;">${p.title}</h3>
+          ${dealHtml}
+        </div>
+        <p class="sample-card-loc">📍 ${p.location}</p>
+        <div class="sample-card-meta">
+          ${bedsHtml}
+          <span>📐 ${p.area} sqft</span>
+          ${bathHtml}
+        </div>
+        <div class="sample-card-price">${fmtPrice(p.price)}</div>
+        <a href="property-detail?id=${p.id}" class="sample-card-btn">View Details →</a>
+      </div>
+    </div>`;
+}
+
+// ── Render demo grid with filter ───────────────────────────────────
+function renderDemoGrid(filter = 'all') {
+  const grid = document.getElementById('demoGrid');
+  if (!grid) return;
+  const list = filter === 'all' ? DEMO_PROPS : DEMO_PROPS.filter(p => p.listingType === filter);
+  if (list.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><span class="empty-icon">🔍</span><h3>No properties found</h3><p>Try a different filter</p></div>`;
+    return;
+  }
+  grid.innerHTML = list.map(renderDemoCard).join('');
+}
+
+// ================================================================
+// MAIN INIT
+// ================================================================
+async function init() {
+  // ── Auth check ────────────────────────────────────────────────
+  const logged = await Auth.isLoggedIn();
+  if (!logged) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // ── Load user data ────────────────────────────────────────────
+  const user = await Auth.getUser();
+  if (user) {
+    const displayName = user.full_name || user.email.split('@')[0];
+    const initials    = displayName.charAt(0).toUpperCase();
+
+    // Update header
+    document.getElementById('welcomeMsg').textContent   = 'Dashboard';
+    document.getElementById('welcomeSub').textContent   = `Logged in as ${user.email}`;
+    document.getElementById('heroGreeting').textContent = `Welcome back, ${displayName}! 👋`;
+    document.getElementById('heroSub').textContent      = `Ready to find your next property?`;
+    document.getElementById('heroAvatar').textContent   = initials;
+
+    // Show logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.style.display = 'flex';
+      logoutBtn.addEventListener('click', e => {
+        e.preventDefault();
+        if (confirm('Are you sure you want to sign out?')) Auth.logout();
+      });
+    }
+  }
+
+  // ── Try to load from Supabase, fall back to demo ──────────────
+  if (sb) {
+    try {
+      await loadStats();
+      await loadProperties();
+      document.getElementById('propertiesGrid').style.display = '';
+      document.getElementById('demoGrid').style.display = 'none';
+    } catch (err) {
+      console.warn('Supabase load failed, showing demo data:', err);
+      showDemoMode();
+    }
+  } else {
+    showDemoMode();
+  }
+
+  // ── Sidebar + theme ───────────────────────────────────────────
+  initSidebar();
+
+  // Theme toggle
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn) {
+    const cur = localStorage.getItem('re_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', cur);
+    themeBtn.textContent = cur === 'dark' ? '🌙' : '☀️';
+    themeBtn.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('re_theme', next);
+      themeBtn.textContent = next === 'dark' ? '🌙' : '☀️';
+    });
+  }
+}
+
+function showDemoMode() {
+  document.getElementById('offlineNotice').classList.add('show');
+  renderDemoGrid('all');
+  document.getElementById('propertiesGrid').style.display = 'none';
+  document.getElementById('demoGrid').style.display = '';
+}
+
+// ── Load stats from Supabase ───────────────────────────────────────
+async function loadStats() {
+  try {
+    const userProps = await Store.getUserProperties();
+    const favs      = await Store.getFavorites();
+    document.getElementById('statProperties').textContent = userProps.length;
+    document.getElementById('statFavorites').textContent  = favs.length;
+  } catch(e) {
+    console.warn('Stats load error:', e);
+  }
+}
+
+// ── Load properties from Supabase ─────────────────────────────────
+async function loadProperties(filter = 'all') {
+  const grid = document.getElementById('propertiesGrid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="spinner-overlay show"><div class="spinner"></div></div>';
+
+  const props  = await Store.getProperties();
+  let favIds   = new Set();
+  try {
+    const favs = await Store.getFavorites();
+    favIds = new Set(favs.map(f => f.id));
+  } catch(e) {}
+
+  const filtered = filter === 'all' ? props : props.filter(p => p.listingType === filter);
+
+  grid.innerHTML = '';
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">🏘️</span>
+        <h3>No properties found</h3>
+        <p>Try a different filter or add a new listing</p>
+        <a href="add-property.html" class="btn btn-gold">+ Add Property</a>
+      </div>`;
+    return;
+  }
+
+  filtered.forEach((prop, i) => {
+    const card = renderPropertyCard(prop, { index: i, showFav: true, isFavorite: favIds.has(prop.id) });
+    grid.appendChild(card);
+  });
+}
+
+// ── Filter tabs ────────────────────────────────────────────────────
+document.getElementById('filterTabs').addEventListener('click', async e => {
+  const btn = e.target.closest('.filter-tab');
+  if (!btn) return;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const f = btn.dataset.filter;
+
+  if (sb) {
+    try { await loadProperties(f); } catch(err) { renderDemoGrid(f); }
+  } else {
+    renderDemoGrid(f);
+  }
+});
+
+// ── Kick off ───────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Details - RealEstate</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-brand"> RealEstate</a>
+  <a href="index.html"><span class="nav-icon"></span> Dashboard<span class="nav-arrow"></span></a>
+  <a href="profile.html"><span class="nav-icon"></span> My Profile<span class="nav-arrow"></span></a>
+  <a href="properties.html"><span class="nav-icon"></span> My Properties<span class="nav-arrow"></span></a>
+  <a href="add-property.html"><span class="nav-icon"></span> Add Property<span class="nav-arrow"></span></a>
+  <a href="messages.html"><span class="nav-icon"></span> Messages<span class="nav-arrow"></span></a>
+  <a href="favorites.html"><span class="nav-icon"></span> Favorites<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="calculators.html"><span class="nav-icon"></span> Calculators<span class="nav-arrow"></span></a>
+  <a href="compare.html"><span class="nav-icon"></span> Compare<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="home.html"><span class="nav-icon"></span> Browse Properties<span class="nav-arrow"></span></a>
+  <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;"><span class="nav-icon"></span> Logout<span class="nav-arrow"></span></a>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+
+  <div class="page-header">
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <div style="flex:1;">
+      <h1 id="propertyTitle">Property Details</h1>
+      <p>Complete information about this listing</p>
+    </div>
+    <button id="themeToggle" class="btn btn-outline btn-sm">
+      <span id="themeIcon"></span>
+    </button>
+  </div>
+
+  <!-- Property Details Container -->
+  <div class="property-detail-layout" id="propertyDetailContainer">
+    <!-- Loaded by JS -->
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+// Theme
+const themeToggle = document.getElementById('themeToggle');
+const themeIcon   = document.getElementById('themeIcon');
+const html        = document.documentElement;
+const savedTheme  = localStorage.getItem('re_theme') || 'dark';
+html.setAttribute('data-theme', savedTheme);
+if (themeIcon) themeIcon.textContent =
+  savedTheme === 'dark' ? '' : '';
+if (themeToggle) themeToggle.addEventListener('click', () => {
+  const n = html.getAttribute('data-theme') === 'dark'
+    ? 'light' : 'dark';
+  html.setAttribute('data-theme', n);
+  if (themeIcon)
+    themeIcon.textContent = n === 'dark' ? '' : '';
+  localStorage.setItem('re_theme', n);
+});
+
+// Get ID from URL
+const propId = new URLSearchParams(window.location.search).get('id');
+
+async function init() {
+  const container = document.getElementById('propertyDetailContainer');
+
+  if (!propId) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">🔍</span>
+        <h3>No Property Selected</h3>
+        <p>Please browse listings and click "View Details" on a property.</p>
+        <a href="home.html" class="btn btn-gold">Browse Properties</a>
+      </div>`;
+    return;
+  }
+
+  const property = await Store.getPropertyById(propId);
+
+  if (!property) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">🏚️</span>
+        <h3>Property Not Found</h3>
+        <p>This property may have been removed or the ID is invalid.</p>
+        <p style="font-size:0.75rem;color:#555;margin-top:6px;">ID: ${propId}</p>
+        <a href="home.html" class="btn btn-gold" style="margin-top:16px;">Browse Properties</a>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('propertyTitle').textContent = property.title;
+  document.title = property.title + ' - RealEstate';
+
+  const user = await Auth.getUser();
+  const isFav = await Store.isFavorite(property.id);
+  const isOwner = user && user.id === property.owner_id;
+
+  const dealColors = {
+    'Great Deal': '#22c55e',
+    'Fair Price':  '#FFD700',
+    'Overpriced':  '#ef4444'
+  };
+  const safeTitle = property.title.replace(/'/g, "\\'");
+
+  // EMI quick calculation
+  const loan = property.price * 0.8;
+  const r    = 8.5 / 12 / 100;
+  const n    = 240;
+  const emi  = Math.round(loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1));
+
+  container.innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start">
+      <!-- LEFT COLUMN -->
+      <div>
+          <div style="margin-bottom:14px;">
+            <div style="position:relative; border-radius:14px; overflow:hidden; margin-bottom:10px;" class="hover-scale">
+              <img src="${property.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800'}"
+                   alt="${property.title}"
+                   style="width:100%;height:360px;object-fit:cover;display:block;cursor:zoom-in;transition:filter 0.3s;"
+                   onmouseover="this.style.filter='brightness(0.85)'"
+                   onmouseout="this.style.filter='brightness(1)'"
+                   onerror="this.src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800'"
+                   onclick="openFS(this.src)">
+              <div style="position:absolute;top:12px;left:12px;display:flex;gap:8px;flex-wrap:wrap">
+                <span class="prop-badge ${property.listingType === 'Rent' ? 'rent' : 'sale'}">
+                  ${property.listingType || 'Sale'}
+                </span>
+                ${property.dealScore ? `<span class="prop-badge deal" style="background:${dealColors[property.dealScore]};color:#000;">${property.dealScore}</span>` : ''}
+              </div>
+            </div>
+            
+            <!-- Gallery Thumbnails for Visual Polish -->
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;">
+              <img src="${property.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800'}" 
+                   style="width:100%;height:90px;object-fit:cover;border-radius:8px;cursor:pointer;opacity:0.6;transition:all 0.2s;border:2px solid transparent;" 
+                   onmouseover="this.style.opacity=1;this.style.borderColor='var(--gold)';" 
+                   onmouseout="this.style.opacity=0.6;this.style.borderColor='transparent';" 
+                   onclick="openFS(this.src)">
+              <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400" 
+                   style="width:100%;height:90px;object-fit:cover;border-radius:8px;cursor:pointer;opacity:0.6;transition:all 0.2s;border:2px solid transparent;" 
+                   onmouseover="this.style.opacity=1;this.style.borderColor='var(--gold)';" 
+                   onmouseout="this.style.opacity=0.6;this.style.borderColor='transparent';" 
+                   onclick="openFS(this.src)">
+              <div style="position:relative;cursor:zoom-in;border-radius:8px;overflow:hidden;" class="hover-scale" onclick="openFS('https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800')">
+                <img src="https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;">+4 Photos</div>
+              </div>
+            </div>
+          </div>
+
+
+        <!-- Title + Location + Price -->
+        <div style="background:var(--card-bg,#161819);
+          border:1px solid
+            var(--border-color,rgba(255,255,255,0.07));
+          border-radius:14px;padding:20px;
+          margin-bottom:14px">
+
+          <h2 style="font-size:1.6rem;font-weight:800;
+            margin-bottom:6px;line-height:1.2">
+            ${property.title}
+          </h2>
+
+          <!--  FIX 2: locality + city (not location)  -->
+          <p style="color:#a0a0a0;margin-bottom:12px;
+            font-size:0.9rem">
+             ${property.location || [property.locality, property.city].filter(Boolean).join(', ') || 'Location not specified'}
+          </p>
+
+          <div style="font-size:1.8rem;font-weight:800;
+            color:#e6b94a;margin-bottom:18px">
+            ${formatCurrency(property.price)}
+          </div>
+
+          <!-- Meta - 4 column grid, NOT stacked -->
+          <div style="display:grid;
+            grid-template-columns:repeat(4,1fr);
+            gap:10px">
+
+            <div style="background:rgba(255,255,255,0.04);
+              border-radius:10px;padding:12px;
+              text-align:center">
+              <div style="font-size:1.3rem"></div>
+              <div style="font-weight:700;margin-top:4px;
+                font-size:0.95rem">
+                ${property.bedrooms || '-'} BHK
+              </div>
+              <div style="font-size:0.65rem;opacity:0.5;
+                text-transform:uppercase;
+                letter-spacing:0.5px">
+                Bedrooms
+              </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.04);
+              border-radius:10px;padding:12px;
+              text-align:center">
+              <div style="font-size:1.3rem"></div>
+              <div style="font-weight:700;margin-top:4px;
+                font-size:0.95rem">
+                ${property.bathrooms || '-'}
+              </div>
+              <div style="font-size:0.65rem;opacity:0.5;
+                text-transform:uppercase;
+                letter-spacing:0.5px">
+                Bathrooms
+              </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.04);
+              border-radius:10px;padding:12px;
+              text-align:center">
+              <div style="font-size:1.3rem"></div>
+              <div style="font-weight:700;margin-top:4px;
+                font-size:0.95rem">
+                ${property.area || '-'}
+              </div>
+              <div style="font-size:0.65rem;opacity:0.5;
+                text-transform:uppercase;
+                letter-spacing:0.5px">
+                Sq.ft
+              </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.04);
+              border-radius:10px;padding:12px;
+              text-align:center">
+              <div style="font-size:1.3rem"></div>
+              <div style="font-weight:700;margin-top:4px;
+                font-size:0.85rem">
+                ${property.furnished ||
+                  property.listingType || 'Sale'}
+              </div>
+              <div style="font-size:0.65rem;opacity:0.5;
+                text-transform:uppercase;
+                letter-spacing:0.5px">
+                Type
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Description + Amenities -->
+        <div style="background:var(--card-bg,#161819);
+          border:1px solid
+            var(--border-color,rgba(255,255,255,0.07));
+          border-radius:14px;padding:20px;
+          margin-bottom:14px">
+          <h3 style="font-size:1rem;font-weight:700;
+            margin-bottom:10px;padding-bottom:8px;
+            border-bottom:1px solid
+              rgba(255,255,255,0.07)">
+            About This Property
+          </h3>
+          <p style="color:#a0a0a0;line-height:1.7;
+            font-size:0.9rem">
+            ${property.description ||
+              'No description provided.'}
+          </p>
+          ${property.amenities &&
+            property.amenities.length > 0 ? `
+            <h3 style="font-size:1rem;font-weight:700;
+              margin:16px 0 10px;padding-top:14px;
+              border-top:1px solid
+                rgba(255,255,255,0.07)">
+              Amenities
+            </h3>
+            <div style="display:flex;
+              flex-wrap:wrap;gap:8px">
+              ${property.amenities.map(a => `
+                <span style="padding:5px 12px;
+                  background:rgba(255,255,255,0.05);
+                  border:1px solid
+                    rgba(255,255,255,0.1);
+                  border-radius:20px;
+                  font-size:0.78rem">
+                   ${a}
+                </span>`).join('')}
+            </div>` : ''}
+        </div>
+
+        <!-- Owner actions (edit / delete) -->
+        ${isOwner ? `
+          <div style="display:flex;gap:10px;
+            flex-wrap:wrap">
+            <a href="add-property.html?edit=${property.id}"
+              class="btn btn-gold">
+               Edit Property
+            </a>
+            <button class="btn btn-danger"
+              onclick="deleteProp('${property.id}')">
+               Delete Property
+            </button>
+          </div>` : ''}
+
+      </div><!-- end left -->
+
+      <!--  RIGHT COLUMN  -->
+      <div style="position:sticky;top:80px;
+        display:flex;flex-direction:column;
+        gap:14px">
+
+        <!-- Contact Card -->
+        <div style="background:var(--card-bg,#161819);
+          border:1px solid rgba(230,185,74,0.2);
+          border-radius:14px;padding:20px">
+
+          <div style="font-size:1rem;font-weight:800;
+            margin-bottom:14px">
+            Contact Owner
+          </div>
+
+          <!-- Owner avatar -->
+          <div style="display:flex;
+            align-items:center;gap:10px;padding:10px;
+            background:rgba(255,255,255,0.04);
+            border-radius:10px;margin-bottom:14px">
+            <div style="width:38px;height:38px;
+              border-radius:50%;
+              background:linear-gradient(
+                135deg,#e6b94a,#d4a43a);
+              display:flex;align-items:center;
+              justify-content:center;
+              font-weight:800;color:#000;
+              font-size:1rem;flex-shrink:0">
+              ${(property.postedBy || 'O')
+                .charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style="font-weight:600;
+                font-size:0.875rem">
+                ${property.postedBy || 'Owner'}
+              </div>
+              <div style="font-size:0.72rem;
+                opacity:0.5">
+                Property Owner
+              </div>
+            </div>
+          </div>
+
+          <!-- Action buttons -->
+          <div style="display:flex;
+            flex-direction:column;gap:8px;
+            margin-bottom:16px">
+
+            <button class="btn btn-gold"
+              style="width:100%"
+              onclick="contactOwner(
+                '${property.id}',
+                '${safeTitle}')">
+               Request Callback
+            </button>
+
+            <button class="btn btn-outline"
+              style="width:100%;color:#e6b94a;
+                border-color:rgba(230,185,74,0.3)"
+              onclick="contactOwner(
+                '${property.id}',
+                '${safeTitle}')">
+               Send Message
+            </button>
+
+            <div style="display:grid;
+              grid-template-columns:1fr 1fr;
+              gap:8px">
+              <button class="btn btn-outline"
+                style="width:100%"
+                id="favBtn"
+                onclick="toggleFav(
+                  '${property.id}', this)">
+                ${isFav ? ' Saved' : ' Save'}
+              </button>
+              <button class="btn btn-outline"
+                style="width:100%"
+                onclick="shareIt()">
+                 Share
+              </button>
+            </div>
+          </div>
+
+          <!-- Enquiry form -->
+          <div style="padding-top:14px;
+            border-top:1px solid
+              rgba(255,255,255,0.07)">
+            <div style="font-size:0.82rem;
+              font-weight:700;margin-bottom:10px">
+              Send Enquiry
+            </div>
+            <div style="display:flex;
+              flex-direction:column;gap:8px">
+              <input type="text" id="enqName"
+                placeholder="Your Name"
+                style="width:100%;padding:9px 12px;
+                background:rgba(255,255,255,0.05);
+                border:1px solid
+                  rgba(255,255,255,0.1);
+                border-radius:8px;color:inherit;
+                font-family:inherit;
+                font-size:0.875rem;outline:none;
+                box-sizing:border-box">
+              <input type="tel" id="enqPhone"
+                placeholder="Phone Number"
+                style="width:100%;padding:9px 12px;
+                background:rgba(255,255,255,0.05);
+                border:1px solid
+                  rgba(255,255,255,0.1);
+                border-radius:8px;color:inherit;
+                font-family:inherit;
+                font-size:0.875rem;outline:none;
+                box-sizing:border-box">
+              <textarea id="enqMsg" rows="3"
+                placeholder="Your message..."
+                style="width:100%;padding:9px 12px;
+                background:rgba(255,255,255,0.05);
+                border:1px solid
+                  rgba(255,255,255,0.1);
+                border-radius:8px;color:inherit;
+                font-family:inherit;
+                font-size:0.875rem;outline:none;
+                resize:vertical;
+                box-sizing:border-box">
+              </textarea>
+              <button class="btn btn-gold"
+                style="width:100%"
+                onclick="sendEnq()">
+                Send Enquiry ->
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick EMI Card -->
+        <div style="background:rgba(255,255,255,0.03);
+          border:1px solid rgba(255,255,255,0.07);
+          border-radius:14px;padding:16px">
+          <div style="font-size:0.9rem;
+            font-weight:700;margin-bottom:10px">
+             Quick EMI
+          </div>
+          <div style="text-align:center;padding:14px;
+            background:rgba(255,255,255,0.04);
+            border-radius:10px">
+            <div style="font-size:1.6rem;
+              font-weight:800;color:#e6b94a">
+              Rs. ${emi.toLocaleString('en-IN')}/mo
+            </div>
+            <div style="font-size:0.72rem;
+              opacity:0.5;margin-top:3px">
+              80% loan  8.5%  20 years
+            </div>
+          </div>
+          <a href="calculators.html"
+            style="display:block;text-align:center;
+            margin-top:10px;font-size:0.75rem;
+            color:#e6b94a;text-decoration:none">
+            Full Calculator ->
+          </a>
+        </div>
+
+        <!-- Back button -->
+        <a href="javascript:history.back()"
+          class="btn btn-outline"
+          style="width:100%;text-align:center">
+           Back to Listings
+        </a>
+
+      </div><!-- end right -->
+    </div>
+
+    <!-- Responsive: stack on mobile -->
+    <style>
+      @media(max-width:900px){
+        #propertyDetailContainer > div {
+          grid-template-columns: 1fr !important;
+        }
+        #propertyDetailContainer > div >
+          div:last-child {
+          position: static !important;
+        }
+      }
+    </style>`;
+
+  //  MAP + NEARBY SECTION 
+  // Insert map section into left column
+  // Find left column (first child of grid)
+  const leftCol =
+    container.querySelector(
+      '[style*="grid-template-columns"] > div');
+
+  if (leftCol) {
+    const mapSection =
+      document.createElement('div');
+    mapSection.innerHTML = `
+      <div style="background:var(--card-bg,#161819);
+        border:1px solid
+          var(--border-color,rgba(255,255,255,0.07));
+        border-radius:14px;padding:20px;
+        margin-bottom:14px">
+
+        <h3 style="font-size:1rem;font-weight:700;
+          margin-bottom:4px">
+           Location & Nearby
+        </h3>
+        <p id="mapAddress"
+          style="font-size:0.78rem;
+          color:#a0a0a0;margin-bottom:14px">
+          ${property.location || property.city || ''}
+        </p>
+
+        <!-- MAP CONTAINER -->
+        <div id="propMap"
+          style="width:100%;height:320px;
+          border-radius:12px;overflow:hidden;
+          border:1px solid rgba(255,255,255,0.08);
+          margin-bottom:16px">
+        </div>
+
+        <!-- CATEGORY FILTER PILLS -->
+        <div style="display:flex;gap:8px;
+          flex-wrap:wrap;margin-bottom:16px">
+          <button class="nearby-pill active"
+            data-type="all"
+            style="padding:6px 14px;
+            border-radius:20px;font-size:0.75rem;
+            font-weight:600;cursor:pointer;
+            border:1px solid var(--gold,#e6b94a);
+            background:rgba(230,185,74,0.12);
+            color:var(--gold,#e6b94a);
+            font-family:inherit;
+            transition:all 0.2s">
+             All
+          </button>
+          <button class="nearby-pill"
+            data-type="school"
+            style="padding:6px 14px;
+            border-radius:20px;font-size:0.75rem;
+            font-weight:600;cursor:pointer;
+            border:1px solid rgba(255,255,255,0.1);
+            background:transparent;
+            color:#a0a0a0;font-family:inherit;
+            transition:all 0.2s">
+             Schools
+          </button>
+          <button class="nearby-pill"
+            data-type="hospital"
+            style="padding:6px 14px;
+            border-radius:20px;font-size:0.75rem;
+            font-weight:600;cursor:pointer;
+            border:1px solid rgba(255,255,255,0.1);
+            background:transparent;
+            color:#a0a0a0;font-family:inherit;
+            transition:all 0.2s">
+             Hospitals
+          </button>
+          <button class="nearby-pill"
+            data-type="restaurant"
+            style="padding:6px 14px;
+            border-radius:20px;font-size:0.75rem;
+            font-weight:600;cursor:pointer;
+            border:1px solid rgba(255,255,255,0.1);
+            background:transparent;
+            color:#a0a0a0;font-family:inherit;
+            transition:all 0.2s">
+             Restaurants
+          </button>
+          <button class="nearby-pill"
+            data-type="metro"
+            style="padding:6px 14px;
+            border-radius:20px;font-size:0.75rem;
+            font-weight:600;cursor:pointer;
+            border:1px solid rgba(255,255,255,0.1);
+            background:transparent;
+            color:#a0a0a0;font-family:inherit;
+            transition:all 0.2s">
+             Metro
+          </button>
+          <button class="nearby-pill"
+            data-type="bank"
+            style="padding:6px 14px;
+            border-radius:20px;font-size:0.75rem;
+            font-weight:600;cursor:pointer;
+            border:1px solid rgba(255,255,255,0.1);
+            background:transparent;
+            color:#a0a0a0;font-family:inherit;
+            transition:all 0.2s">
+             Banks
+          </button>
+          <button class="nearby-pill"
+            data-type="supermarket"
+            style="padding:6px 14px;
+            border-radius:20px;font-size:0.75rem;
+            font-weight:600;cursor:pointer;
+            border:1px solid rgba(255,255,255,0.1);
+            background:transparent;
+            color:#a0a0a0;font-family:inherit;
+            transition:all 0.2s">
+             Markets
+          </button>
+        </div>
+
+        <!-- NEARBY LIST -->
+        <div id="nearbyList"
+          style="display:flex;
+          flex-direction:column;gap:8px">
+          <div style="text-align:center;
+            padding:20px;color:#a0a0a0;
+            font-size:0.85rem">
+             Loading nearby places...
+          </div>
+        </div>
+      </div>`;
+
+    // Insert before owner actions or at end
+    const ownerActions = leftCol.querySelector(
+      '[href*="add-property"]')?.closest('div');
+    if (ownerActions) {
+      leftCol.insertBefore(
+        mapSection, ownerActions);
+    } else {
+      leftCol.appendChild(mapSection);
+    }
+  }
+
+  //  GEOCODE city name to lat/lng 
+  const cityCoords = {
+    'Mumbai':    [19.0760, 72.8777],
+    'Bangalore': [12.9716, 77.5946],
+    'Delhi':     [28.6139, 77.2090],
+    'Hyderabad': [17.3850, 78.4867],
+    'Pune':      [18.5204, 73.8567],
+    'Chennai':   [13.0827, 80.2707],
+    'Gurgaon':   [28.4595, 77.0266],
+    'Noida':     [28.5355, 77.3910],
+    'Kolkata':   [22.5726, 88.3639],
+    'Ahmedabad': [23.0225, 72.5714],
+    'Jaipur':    [26.9124, 75.7873],
+    'Surat':     [21.1702, 72.8311],
+    'Lucknow':   [26.8467, 80.9462],
+    'Chandigarh':[30.7333, 76.7794],
+    'Kochi':     [9.9312,  76.2673],
+    'Indore':    [22.7196, 75.8577],
+    'Nagpur':    [21.1458, 79.0882],
+    'Bhopal':    [23.2599, 77.4126],
+    'Coimbatore':[11.0168, 76.9558],
+    'Visakhapatnam':[17.6868,83.2185]
+  };
+
+  // Extract city from location string (e.g. "Bandra West, Mumbai" → "Mumbai")
+  const locationStr = property.location || property.city || '';
+  const cityFromLocation = locationStr.split(',').pop().trim();
+  const city = property.city || cityFromLocation || 'Mumbai';
+  const base = cityCoords[city] ||
+    [19.0760, 72.8777];
+
+  // Small random offset so each property
+  // in same city has slightly different pin
+  const lat = base[0] +
+    (Math.random() - 0.5) * 0.04;
+  const lng = base[1] +
+    (Math.random() - 0.5) * 0.04;
+
+  //  INIT LEAFLET MAP 
+  setTimeout(() => {
+    const mapEl =
+      document.getElementById('propMap');
+    if (!mapEl || !window.L) return;
+
+    const map = L.map('propMap', {
+      zoomControl: true,
+      scrollWheelZoom: true
+    }).setView([lat, lng], 15);
+
+    L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/' +
+      '{z}/{x}/{y}.png',
+      {
+        attribution:
+          '(c) OpenStreetMap contributors',
+        maxZoom: 19
+      }
+    ).addTo(map);
+
+    // Property pin (gold)
+    const goldIcon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:36px;height:36px;
+        border-radius:50% 50% 50% 0;
+        transform:rotate(-45deg);
+        background:linear-gradient(
+          135deg,#e6b94a,#d4a43a);
+        border:3px solid #fff;
+        box-shadow:0 4px 12px rgba(0,0,0,0.4);
+        display:flex;align-items:center;
+        justify-content:center;">
+        <span style="transform:rotate(45deg);
+          font-size:14px;"></span>
+      </div>`,
+      iconSize: [36, 36],
+      iconAnchor: [18, 36],
+      popupAnchor: [0, -36]
+    });
+    const marker = L.marker([lat, lng], { icon: goldIcon }).addTo(map);
+    marker.bindPopup(`
+      <div style="font-family:sans-serif;
+        min-width:180px">
+        <strong style="font-size:0.9rem">
+          ${property.title}
+        </strong><br>
+        <span style="color:#666;font-size:0.78rem">
+          ${property.location || property.city || ''}
+        </span><br>
+        <strong style="color:#e6b94a">
+          ${formatCurrency(property.price)}
+        </strong>
+      </div>`).openPopup();
+
+    // Store nearby markers for filter
+    let nearbyMarkers = [];
+
+    //  OVERPASS API: fetch nearby places 
+    const ICONS = {
+      school:      '',
+      hospital:    '',
+      restaurant:  '',
+      fast_food:   '',
+      cafe:        '',
+      bank:        '',
+      atm:         '',
+      supermarket: '',
+      subway:      '',
+      bus_stop:    '',
+      park:        '',
+      pharmacy:    ''
+    };
+    const COLORS = {
+      school:     '#3b82f6',
+      hospital:   '#ef4444',
+      restaurant: '#f97316',
+      fast_food:  '#f97316',
+      cafe:       '#92400e',
+      bank:       '#8b5cf6',
+      atm:        '#8b5cf6',
+      supermarket:'#22c55e',
+      subway:     '#06b6d4',
+      bus_stop:   '#06b6d4',
+      park:       '#16a34a',
+      pharmacy:   '#ec4899'
+    };
+
+    function buildOverpassQuery(lt, ln, r) {
+      return `
+        [out:json][timeout:25];
+        (
+          node["amenity"="school"]
+            (around:${r},${lt},${ln});
+          node["amenity"="hospital"]
+            (around:${r},${lt},${ln});
+          node["amenity"="clinic"]
+            (around:${r},${lt},${ln});
+          node["amenity"="restaurant"]
+            (around:${r},${lt},${ln});
+          node["amenity"="fast_food"]
+            (around:${r},${lt},${ln});
+          node["amenity"="cafe"]
+            (around:${r},${lt},${ln});
+          node["amenity"="bank"]
+            (around:${r},${lt},${ln});
+          node["amenity"="atm"]
+            (around:${r},${lt},${ln});
+          node["shop"="supermarket"]
+            (around:${r},${lt},${ln});
+          node["shop"="mall"]
+            (around:${r},${lt},${ln});
+          node["station"="subway"]
+            (around:${r},${lt},${ln});
+          node["railway"="subway_entrance"]
+            (around:${r},${lt},${ln});
+          node["highway"="bus_stop"]
+            (around:${r},${lt},${ln});
+          node["leisure"="park"]
+            (around:${r},${lt},${ln});
+          node["amenity"="pharmacy"]
+            (around:${r},${lt},${ln});
+        );
+        out body 60;`;
+    }
+
+    function getCategoryFor(tags) {
+      const a = tags.amenity || '';
+      const s = tags.shop    || '';
+      const r = tags.railway || '';
+      const h = tags.highway || '';
+      const st= tags.station || '';
+      if (a === 'school' || a === 'college'
+          || a === 'university')
+        return 'school';
+      if (a === 'hospital' || a === 'clinic')
+        return 'hospital';
+      if (a === 'restaurant' || a === 'fast_food'
+          || a === 'cafe')
+        return 'restaurant';
+      if (a === 'bank' || a === 'atm')
+        return 'bank';
+      if (s === 'supermarket' || s === 'mall')
+        return 'supermarket';
+      if (r === 'subway_entrance'
+          || st === 'subway')
+        return 'metro';
+      if (h === 'bus_stop')
+        return 'metro';
+      return 'other';
+    }
+
+    function calcDist(lat1,lon1,lat2,lon2) {
+      const R = 6371000;
+      const dLat =
+        (lat2-lat1) * Math.PI/180;
+      const dLon =
+        (lon2-lon1) * Math.PI/180;
+      const a =
+        Math.sin(dLat/2)*Math.sin(dLat/2) +
+        Math.cos(lat1*Math.PI/180)*
+        Math.cos(lat2*Math.PI/180)*
+        Math.sin(dLon/2)*Math.sin(dLon/2);
+      return R * 2 * Math.atan2(
+        Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function formatDist(m) {
+      return m < 1000
+        ? Math.round(m) + ' m'
+        : (m/1000).toFixed(1) + ' km';
+    }
+
+    let allNearby = [];
+    let activeFilter = 'all';
+
+    function renderNearbyList(filter) {
+      const list =
+        document.getElementById('nearbyList');
+      if (!list) return;
+
+      const items = filter === 'all'
+        ? allNearby
+        : allNearby.filter(
+            n => n.category === filter);
+
+      // Update map markers
+      nearbyMarkers.forEach(m => map.removeLayer(m));
+      nearbyMarkers = [];
+
+      items.slice(0, 30).forEach(place => {
+        const ic = L.divIcon({
+          className: '',
+          html: `<div style="
+            width:28px;height:28px;
+            border-radius:50%;
+            background:${
+              COLORS[place.amenityType]
+              || '#6b7280'};
+            border:2px solid rgba(255,255,255,0.7);
+            display:flex;align-items:center;
+            justify-content:center;
+            font-size:13px;
+            box-shadow:0 2px 6px rgba(0,0,0,0.3)">
+            ${ICONS[place.amenityType] || ''}
+          </div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+        const pm = L.marker(
+          [place.lat, place.lng],
+          { icon: ic }).addTo(map);
+        pm.bindPopup(`
+          <div style="font-family:sans-serif">
+            <strong>${place.name}</strong><br>
+            <span style="color:#666;
+              font-size:0.75rem">
+              ${formatDist(place.dist)} away
+            </span>
+          </div>`);
+        nearbyMarkers.push(pm);
+      });
+
+      if (items.length === 0) {
+        list.innerHTML = `
+          <div style="text-align:center;
+            padding:20px;color:#a0a0a0;
+            font-size:0.85rem">
+            No ${filter === 'all'
+              ? 'places' : filter + 's'}
+            found nearby
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = items
+        .slice(0, 8)
+        .map(place => `
+          <div style="display:flex;
+            align-items:center;gap:12px;
+            padding:10px 12px;
+            background:rgba(255,255,255,0.03);
+            border:1px solid
+              rgba(255,255,255,0.07);
+            border-radius:10px;
+            transition:background 0.15s"
+            onmouseover="this.style.background=
+              'rgba(255,255,255,0.06)'"
+            onmouseout="this.style.background=
+              'rgba(255,255,255,0.03)'">
+            <div style="width:36px;height:36px;
+              border-radius:10px;flex-shrink:0;
+              background:${
+                COLORS[place.amenityType]
+                || '#6b7280'}22;
+              display:flex;align-items:center;
+              justify-content:center;
+              font-size:18px;border:1px solid ${
+                COLORS[place.amenityType]
+                || '#6b7280'}44">
+              ${ICONS[place.amenityType] || ''}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;
+                font-size:0.85rem;
+                overflow:hidden;
+                white-space:nowrap;
+                text-overflow:ellipsis">
+                ${place.name}
+              </div>
+              <div style="font-size:0.7rem;
+                color:#a0a0a0;margin-top:2px">
+                ${place.categoryLabel}
+              </div>
+            </div>
+            <div style="font-size:0.75rem;
+              font-weight:700;flex-shrink:0;
+              padding:4px 10px;border-radius:20px;
+              background:rgba(255,255,255,0.05);
+              color:#e6b94a">
+              ${formatDist(place.dist)}
+            </div>
+          </div>`)
+        .join('') +
+        (items.length > 8 ? `
+          <div style="text-align:center;
+            padding:8px;font-size:0.75rem;
+            color:#a0a0a0">
+            +${items.length - 8} more places
+          </div>` : '');
+    }
+
+    // Fetch from Overpass API
+    const query = buildOverpassQuery(
+      lat, lng, 1500);
+    const url =
+      'https://overpass-api.de/api/interpreter';
+
+    const nearbyList =
+      document.getElementById('nearbyList');
+
+    fetch(url, {
+      method: 'POST',
+      body: 'data=' +
+        encodeURIComponent(query)
+    })
+    .then(r => r.json())
+    .then(data => {
+      const LABELS = {
+        school:     'School / College',
+        hospital:   'Hospital / Clinic',
+        restaurant: 'Restaurant / Cafe',
+        bank:       'Bank / ATM',
+        supermarket:'Supermarket / Mall',
+        metro:      'Metro / Bus Stop',
+        other:      'Nearby Place'
+      };
+
+      allNearby = (data.elements || [])
+        .filter(el =>
+          el.lat && el.lon && el.tags?.name)
+        .map(el => {
+          const cat =
+            getCategoryFor(el.tags);
+          const aType =
+            el.tags.amenity ||
+            el.tags.shop    ||
+            el.tags.railway ||
+            el.tags.highway ||
+            'place';
+          return {
+            name: el.tags.name,
+            lat:  el.lat,
+            lng:  el.lon,
+            category: cat,
+            amenityType: aType,
+            categoryLabel: LABELS[cat]
+              || 'Nearby',
+            dist: calcDist(
+              lat, lng, el.lat, el.lon)
+          };
+        })
+        .sort((a, b) => a.dist - b.dist);
+
+      renderNearbyList(activeFilter);
+    })
+    .catch(() => {
+      if (nearbyList)
+        nearbyList.innerHTML = `
+          <div style="text-align:center;
+            padding:20px;color:#a0a0a0;
+            font-size:0.85rem">
+             Could not load nearby places.
+            Check your internet connection.
+          </div>`;
+    });
+
+    //  FILTER PILLS click handler 
+    document.querySelectorAll('.nearby-pill')
+      .forEach(pill => {
+        pill.addEventListener('click',
+          function () {
+            document.querySelectorAll(
+              '.nearby-pill').forEach(p => {
+              p.style.borderColor =
+                'rgba(255,255,255,0.1)';
+              p.style.background =
+                'transparent';
+              p.style.color = '#a0a0a0';
+            });
+            this.style.borderColor =
+              'var(--gold,#e6b94a)';
+            this.style.background =
+              'rgba(230,185,74,0.12)';
+            this.style.color =
+              'var(--gold,#e6b94a)';
+            activeFilter =
+              this.dataset.type;
+            renderNearbyList(activeFilter);
+          });
+      });
+
+  }, 300); // end setTimeout for map init
+}
+
+//  Helper functions 
+
+async function contactOwner(propId, propTitle) {
+  const logged = await Auth.isLoggedIn();
+  if (!logged) {
+    showToast('Please login to contact the owner', 'warning');
+    setTimeout(() => window.location.href = 'login.html', 1500);
+    return;
+  }
+  
+  showToast('Opening messages... ', 'success');
+  setTimeout(() => window.location.href = `messages.html?propertyId=${propId}`, 700);
+}
+
+async function toggleFav(id, btn) {
+  const logged = await Auth.isLoggedIn();
+  if (!logged) {
+    showToast('Sign in to save properties', 'warning');
+    return;
+  }
+  const prop = await Store.getPropertyById(id);
+  if (!prop) return;
+  const isCurrentlyFav = await Store.isFavorite(id);
+  const nowFav = await Store.toggleFavorite(prop);
+  btn.textContent = nowFav ? ' Saved' : ' Save';
+  showToast(
+    nowFav ? 'Saved to favorites! ' : 'Removed from favorites',
+    nowFav ? 'success' : 'info');
+}
+
+function shareIt() {
+  const url = window.location.href;
+  if (navigator.share) {
+    navigator.share({
+      title: document.title, url
+    }).catch(() => copyLink(url));
+  } else {
+    copyLink(url);
+  }
+}
+
+function copyLink(url) {
+  navigator.clipboard.writeText(url)
+    .then(() =>
+      showToast('Link copied! ', 'success'))
+    .catch(() => {
+      const el =
+        document.createElement('textarea');
+      el.value = url;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      el.remove();
+      showToast('Link copied! ', 'success');
+    });
+}
+
+function sendEnq() {
+  const name =
+    document.getElementById('enqName')
+      ?.value.trim();
+  const phone =
+    document.getElementById('enqPhone')
+      ?.value.trim();
+  if (!name || !phone) {
+    showToast(
+      'Please enter name and phone',
+      'warning');
+    return;
+  }
+  showToast(
+    'Enquiry sent! Owner will contact you ',
+    'success');
+  document.getElementById('enqName').value  = '';
+  document.getElementById('enqPhone').value = '';
+  document.getElementById('enqMsg').value   = '';
+}
+
+function deleteProp(id) {
+  if (!confirm('Delete this property?')) return;
+  Store.deleteProperty(id);
+  showToast('Property deleted!', 'success');
+  setTimeout(
+    () => window.location.href =
+      'properties.html',
+    1500);
+}
+
+function openFS(src) {
+  const ov = document.createElement('div');
+  ov.className = 'lightbox-overlay';
+  
+  const closeBtn = document.createElement('div');
+  closeBtn.className = 'lightbox-close';
+  closeBtn.innerHTML = '×';
+  closeBtn.onclick = () => {
+    ov.classList.remove('show');
+    setTimeout(() => ov.remove(), 300);
+  };
+  
+  const img = document.createElement('img');
+  img.src = src;
+  
+  ov.appendChild(img);
+  ov.appendChild(closeBtn);
+  
+  ov.onclick = (e) => {
+    if (e.target === ov) closeBtn.onclick();
+  };
+  
+  document.addEventListener('keydown', e => { 
+    if (e.key === 'Escape') closeBtn.onclick(); 
+  }, { once: true });
+  
+  document.body.appendChild(ov);
+  
+  // Trigger animation next frame
+  requestAnimationFrame(() => {
+    ov.classList.add('show');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  // Init sidebar hamburger
+  const hamburger = document.getElementById('hamburger');
+  const sidebar   = document.getElementById('sidebar');
+  const overlay   = document.getElementById('overlay');
+  if (hamburger && sidebar) {
+    hamburger.addEventListener('click', function() {
+      sidebar.classList.toggle('open');
+      if (overlay) overlay.classList.toggle('show');
+    });
+    if (overlay) overlay.addEventListener('click', function() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+    });
+  }
+  // Show/hide logout button in sidebar
+  const logoutBtn = document.getElementById('logoutBtn');
+  const user = await Auth.getUser();
+  if (logoutBtn && user) {
+    logoutBtn.style.display = 'flex';
+    logoutBtn.addEventListener('click', async function() {
+      await Auth.logout();
+      window.location.href = 'home.html';
+    });
+  }
+  // Load property
+  init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages - RealEstate</title>
+<link rel="stylesheet" href="style.css">
+<style>
+html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
+body.light { background: #f8f9fa; color: #1a1a1a; }
+
+/* Dashboard-style Main Layout */
+.main { position: fixed; inset: 0; left: 260px; display: flex; flex-direction: column; background: var(--bg); transition: all 0.3s ease; }
+@media (max-width: 900px) { .main { left: 0; } }
+
+.page-header { flex-shrink: 0; margin-bottom: 0; border-radius: 0; border-right: none; border-left: none; border-top: none; }
+
+/* ===== MESSAGES LAYOUT ===== */
+.messages-layout {
+  flex: 1;
+  display:grid; grid-template-columns:290px 1fr;
+  overflow:hidden; background:#0a0b0c; border-top: 1px solid rgba(255,255,255,0.05);
+}
+@media (max-width: 800px) { .messages-layout { grid-template-columns: 1fr; } }
+
+.msg-list { border-right:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; overflow:hidden; }
+.msg-list-head {
+  padding:14px 16px; font-size:.75rem; font-weight:700; color:#555;
+  text-transform:uppercase; letter-spacing:.8px;
+  border-bottom:1px solid rgba(255,255,255,0.04); flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.unread-badge { background:#e6b94a; color:#000; font-size:.65rem; font-weight:800; padding:2px 7px; border-radius:20px; }
+.conv-scroll { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.05) transparent; }
+.conv-item { display:flex; align-items:center; gap:11px; padding:12px 14px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.03); transition:background .15s; }
+.conv-item:hover { background:rgba(255,255,255,0.02); }
+.conv-item.active { background:rgba(230,185,74,0.06); border-left:3px solid #e6b94a; }
+.conv-av { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#1a1400,#2c2200); border:1px solid rgba(230,185,74,0.2); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:#e6b94a; flex-shrink:0; }
+.conv-av.ai { background:linear-gradient(135deg,#071510,#0d2218); border-color:rgba(34,197,94,0.3); font-size:19px; }
+.conv-info { flex:1; min-width:0; }
+.conv-name { font-size:.85rem; font-weight:700; color:#d0d0d0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conv-prev { font-size:.75rem; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.conv-meta { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
+.conv-time { font-size:.68rem; color:#444; }
+.unread-dot { width:8px; height:8px; border-radius:50%; background:#e6b94a; }
+/* Chat window */
+.chat-win { flex:1; display:flex; flex-direction:column; background:#090a0b; overflow:hidden; }
+.chat-head { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid rgba(255,255,255,0.05); background:#0c0d0e; flex-shrink:0; }
+.chat-head-name { font-family:'Syne',sans-serif; font-size:.95rem; font-weight:800; color:#e8e8e8; }
+.chat-head-sub  { font-size:.73rem; color:#555; margin-top:1px; }
+.ai-badge { background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.25); color:#22c55e; padding:3px 9px; border-radius:20px; font-size:.68rem; font-weight:700; display:flex; align-items:center; gap:5px; }
+.ai-dot { width:6px; height:6px; border-radius:50%; background:#22c55e; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.chat-body { flex:1; overflow-y:auto; padding:18px 16px; display:flex; flex-direction:column; gap:10px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.05) transparent; scroll-behavior: smooth; }
+/* Bubbles */
+.bw { display:flex; flex-direction:column; max-width:78%; gap:3px; animation:popIn .2s ease; }
+@keyframes popIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.bw.me   { align-self:flex-end;  align-items:flex-end; }
+.bw.them { align-self:flex-start; align-items:flex-start; }
+.bbl { padding:10px 14px; border-radius:18px; font-size:.875rem; line-height:1.65; word-break:break-word; }
+.bw.me   .bbl { background:linear-gradient(135deg,#b8860b,#e6b94a); color:#000; font-weight:500; border-bottom-right-radius:4px; }
+.bw.them .bbl { background:#161b1e; color:#d0d0d0; border:1px solid rgba(255,255,255,0.06); border-bottom-left-radius:4px; }
+.bw.them.ai .bbl { background:#091510; border-color:rgba(34,197,94,0.15); color:#c8e8d0; }
+.btime { font-size:.67rem; color:#3a3a3a; padding:0 4px; }
+/* Typing */
+.typing-bbl { background:#091510; border:1px solid rgba(34,197,94,0.15); padding:12px 15px; border-radius:18px; border-bottom-left-radius:4px; display:flex; align-items:center; gap:5px; }
+.td { width:6px; height:6px; border-radius:50%; background:#22c55e; animation:tdp 1.2s infinite; }
+.td:nth-child(2){animation-delay:.2s} .td:nth-child(3){animation-delay:.4s}
+@keyframes tdp { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1.1)} }
+/* Suggestions */
+.sugg-row { display:flex; gap:7px; flex-wrap:wrap; padding:10px 16px; border-top:1px solid rgba(255,255,255,0.04); background:#0a0b0c; flex-shrink:0; }
+.sugg-chip { background:rgba(230,185,74,0.07); border:1px solid rgba(230,185,74,0.2); color:#e6b94a; padding:5px 12px; border-radius:20px; font-size:.75rem; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.sugg-chip:hover { background:rgba(230,185,74,0.15); }
+/* Input */
+.chat-input-row { display:flex; align-items:center; gap:10px; padding:12px 14px; border-top:1px solid rgba(255,255,255,0.05); background:#0c0d0e; flex-shrink:0; }
+.chat-input-row input { flex:1; background:#111316; border:1px solid rgba(255,255,255,0.08); border-radius:22px; padding:10px 16px; color:#e8e8e8; font-size:.875rem; outline:none; transition:border-color .2s; }
+.chat-input-row input:focus { border-color:rgba(230,185,74,0.35); }
+.chat-input-row input::placeholder { color:#3a3a3a; }
+.send-btn { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#b8860b,#e6b94a); border:none; cursor:pointer; font-size:16px; color:#000; display:flex; align-items:center; justify-content:center; transition:transform .15s; flex-shrink:0; }
+.send-btn:hover { transform:scale(1.08); }
+.send-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+/* ===== FEATURE CARDS ===== */
+.feat-card { background:#0e1214; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; margin:4px 0; width:100%; max-width:480px; box-sizing:border-box; }
+.feat-card h4 { font-family:'Syne',sans-serif; font-size:.85rem; font-weight:800; color:#e6b94a; margin:0 0 12px; display:flex; align-items:center; gap:7px; }
+.feat-card label { font-size:.75rem; color:#777; display:block; margin-bottom:4px; margin-top:10px; }
+.feat-card input, .feat-card select {
+  width:100%; padding:8px 11px; background:#111416; border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px; color:#e8e8e8; font-size:.82rem; outline:none; box-sizing:border-box;
+  transition:border-color .2s;
+}
+.feat-card input:focus, .feat-card select:focus { border-color:rgba(230,185,74,0.4); }
+.feat-card input[type=range] { padding:0; background:transparent; border:none; height:20px; cursor:pointer; accent-color:#e6b94a; }
+.fc-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.fc-btn { margin-top:12px; width:100%; padding:9px; background:linear-gradient(135deg,#b8860b,#e6b94a); border:none; border-radius:8px; color:#000; font-weight:700; font-size:.82rem; cursor:pointer; transition:opacity .2s; }
+.fc-btn:hover { opacity:.85; }
+.fc-result { margin-top:12px; background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.2); border-radius:8px; padding:12px; font-size:.82rem; color:#c8e8d0; line-height:1.8; }
+.fc-result strong { color:#22c55e; }
+.fc-err { color:#ef4444; font-size:.78rem; margin-top:8px; }
+.map-frame { width:100%; height:220px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); margin-top:10px; overflow:hidden; }
+.map-frame iframe { width:100%; height:100%; border:none; }
+.nearby-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.nearby-item { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:10px; font-size:.75rem; color:#888; }
+.nearby-item strong { display:block; color:#c0c0c0; font-size:.8rem; margin-bottom:3px; }
+.avail-row { display:flex; align-items:center; gap:8px; padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); margin-top:6px; }
+.avail-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.avail-dot.green { background:#22c55e; box-shadow:0 0 6px rgba(34,197,94,0.5); }
+.avail-dot.yellow { background:#e6b94a; }
+.avail-dot.red { background:#ef4444; }
+.fraud-row { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; margin-top:6px; font-size:.78rem; }
+.fraud-ok   { background:rgba(34,197,94,0.07);  border:1px solid rgba(34,197,94,0.2);  color:#22c55e; }
+.fraud-warn { background:rgba(230,185,74,0.07); border:1px solid rgba(230,185,74,0.2); color:#e6b94a; }
+.fraud-bad  { background:rgba(239,68,68,0.07);  border:1px solid rgba(239,68,68,0.2);  color:#ef4444; }
+.upload-zone { border:2px dashed rgba(230,185,74,0.25); border-radius:10px; padding:18px; text-align:center; cursor:pointer; transition:border-color .2s; margin-top:10px; }
+.upload-zone:hover { border-color:rgba(230,185,74,0.5); }
+.upload-zone.drag { border-color:#e6b94a; background:rgba(230,185,74,0.05); }
+.doc-file-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; margin-top:6px; font-size:.78rem; color:#aaa; }
+.doc-file-item .doc-icon { font-size:18px; }
+.doc-file-item .doc-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.doc-file-item a { color:#e6b94a; text-decoration:none; font-size:.73rem; flex-shrink:0; }
+.tour-frame { width:100%; height:240px; border-radius:12px; overflow:hidden; margin-top:10px; position:relative; background:#0d1a10; display:flex; align-items:center; justify-content:center; }
+.tour-controls { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.tour-btn { padding:6px 13px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.25); border-radius:20px; color:#22c55e; font-size:.75rem; cursor:pointer; transition:all .15s; }
+.tour-btn:hover, .tour-btn.active { background:rgba(34,197,94,0.2); }
+.score-bar { height:8px; border-radius:4px; background:rgba(255,255,255,0.05); margin-top:6px; overflow:hidden; }
+.score-fill { height:100%; border-radius:4px; transition:width .5s ease; }
+
+/* Interactive AI Components */
+.ai-card { background:#121418; border:1px solid rgba(255,215,0,0.15); border-radius:12px; padding:12px; margin-top:8px; width:100%; max-width:300px; animation: slideIn .3s ease; }
+.ai-card img { width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:10px; }
+.ai-card-title { font-size:0.85rem; font-weight:700; color:#e8e8e8; margin-bottom:4px; }
+.ai-card-price { color:#e6b94a; font-size:0.9rem; font-weight:800; margin-bottom:8px; }
+.ai-card-btn { width:100%; padding:7px; background:rgba(230,185,74,0.1); border:1px solid rgba(230,185,74,0.3); color:#e6b94a; border-radius:6px; font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.ai-card-btn:hover { background:rgba(230,185,74,0.2); }
+@keyframes slideIn { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+
+@media (max-width:800px) { .messages-layout { grid-template-columns:1fr; } .msg-list { display:none; } .msg-list.show { display:flex; } }
+</style>
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-brand">&#127968; RealEstate</a>
+  <a href="index.html"><span class="nav-icon">&#128202;</span> Dashboard<span class="nav-arrow">&#8250;</span></a>
+  <a href="profile.html"><span class="nav-icon">&#128100;</span> My Profile<span class="nav-arrow">&#8250;</span></a>
+  <a href="properties.html"><span class="nav-icon">&#127969;</span> My Properties<span class="nav-arrow">&#8250;</span></a>
+  <a href="add-property.html"><span class="nav-icon">&#10133;</span> Add Property<span class="nav-arrow">&#8250;</span></a>
+  <a href="messages.html" class="active"><span class="nav-icon">&#128172;</span> Messages<span class="nav-arrow">&#8250;</span></a>
+  <a href="favorites.html"><span class="nav-icon">&#10084;</span> Favorites<span class="nav-arrow">&#8250;</span></a>
+  <div class="sidebar-divider"></div>
+  <a href="calculators.html"><span class="nav-icon">&#129521;</span> Calculators<span class="nav-arrow">&#8250;</span></a>
+  <a href="compare.html"><span class="nav-icon">&#9878;</span> Compare<span class="nav-arrow">&#8250;</span></a>
+  <div class="sidebar-divider"></div>
+  <a href="home.html"><span class="nav-icon">&#127760;</span> Browse Properties<span class="nav-arrow">&#8250;</span></a>
+  <a href="#" onclick="showSecurityDashboard();return false;"><span class="nav-icon">&#128737;</span> Security Center<span class="nav-arrow">&#8250;</span></a>
+  <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;"><span class="nav-icon">&#128682;</span> Sign Out<span class="nav-arrow">&#8250;</span></a>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+  <div class="page-header">
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <div>
+      <h1 id="welcomeMsg">Messages &#128172;</h1>
+      <p>Chat with buyers, sellers &amp; AI Assistant</p>
+    </div>
+    <div style="margin-left:auto; display:flex; gap:12px; align-items:center;">
+       <button id="themeToggle" class="btn btn-outline btn-sm" style="padding:8px 12px; font-size:16px;" title="Toggle Theme"></button>
+       <a href="home.html" class="btn btn-outline btn-sm"> Back</a>
+    </div>
+  </div>
+
+  <div class="messages-layout">
+
+    <!-- LEFT: Conversation list -->
+    <div class="msg-list">
+      <div class="msg-list-head">
+        Conversations
+        <span class="unread-badge" id="unreadBadge">4</span>
+      </div>
+      <div class="conv-scroll" id="convScroll"></div>
+    </div>
+
+    <!-- RIGHT: Chat window -->
+    <div class="chat-win">
+      <div class="chat-head">
+        <div class="conv-av ai" id="headAv">&#129302;</div>
+        <div style="flex:1">
+          <div class="chat-head-name" id="headName">AI Property Assistant</div>
+          <div class="chat-head-sub"  id="headSub">Ask me anything about real estate</div>
+        </div>
+        <div class="ai-badge" id="aiBadge" style="margin-right:12px;"><div class="ai-dot"></div> Online</div>
+        <button id="resetChatBtn" onclick="resetAIChat()" style="background:none; border:none; cursor:pointer; font-size:18px; color:#555; padding:5px; transition:color 0.2s;" title="Reset Conversation"></button>
+      </div>
+
+      <div class="chat-body" id="chatBody"></div>
+
+      <div class="sugg-row" id="suggRow" style="display:none"></div>
+
+      <div class="chat-input-row">
+        <input id="msgInput" type="text" placeholder="Ask about EMI, location, documents..." disabled autocomplete="off">
+        <button class="send-btn" id="sendBtn" onclick="sendMsg()" disabled title="Send">&#10148;</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+/* ===================================================
+   MESSAGES PAGE — Rich AI Property Assistant
+   =================================================== */
+let currentUser = null;
+let activeConv  = null;
+let allMessages = [];
+let aiTyping    = false;
+let chatCtx     = { city:null, budget:null, category:null, bhk:null };
+let allProps    = [];
+
+async function init() {
+  currentUser = await Auth.getUser();
+  if (!currentUser) { window.location.href = 'login.html'; return; }
+
+  // Pre-load properties for AI responses
+  allProps = await Store.getProperties();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  await loadConversations(urlParams.get('propertyId'));
+}
+
+/* ─── Conversations ─────────────────────────────── */
+async function loadConversations(targetPropId) {
+  allMessages = await Store.getMessages();
+  const convMap = new Map();
+
+  convMap.set('bot', {
+    id:'bot', name:'AI Property Assistant', av:'🤖', isAI:true,
+    sub:'Smart real-estate advisor • Always available',
+    preview:'Ask me anything about real estate!', time:'Now', msgs:[]
+  });
+
+  allMessages.forEach(m => {
+    const otherId   = m.sender_id === currentUser.id ? m.receiver_id : m.sender_id;
+    const otherName = m.sender_id === currentUser.id ? (m.receiver_name||'Owner') : (m.sender_name||'User');
+    const key = `${otherId}_${m.property_id||'general'}`;
+    if (!convMap.has(key)) {
+      convMap.set(key, {
+        id:key, participant_id:otherId, property_id:m.property_id,
+        name:otherName, av:otherName.charAt(0),
+        preview:m.text, time:ts(m.created_at), msgs:[]
+      });
+    }
+    convMap.get(key).msgs.push({ text:m.text, time:ts(m.created_at), me: m.sender_id===currentUser.id });
+  });
+
+  if (targetPropId) {
+    const prop = await Store.getPropertyById(targetPropId);
+    if (prop) {
+      // If property has no owner, fall back gracefully to AI chat
+      if (!prop.owner_id) {
+        activeConv = convMap.get('bot');
+        showToast('No owner found for this property. Opening AI Assistant instead.', 'info');
+      } else {
+        const key = `${prop.owner_id}_${prop.id}`;
+        if (!convMap.has(key)) {
+          convMap.set(key, {
+            id:key, participant_id:prop.owner_id, property_id:prop.id,
+            name:prop.contact_name||'Owner', av:(prop.contact_name||'O').charAt(0),
+            preview:`Enquiry for ${prop.title}`, time:'Now', msgs:[]
+          });
+        }
+        activeConv = convMap.get(key);
+      }
+    }
+  }
+
+  const convs = Array.from(convMap.values());
+  renderList(convs);
+  openConv(activeConv ? activeConv.id : 'bot', convs);
+}
+
+function renderList(convs) {
+  const scroll = document.getElementById('convScroll');
+  scroll.innerHTML = '';
+  convs.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'conv-item' + (activeConv && c.id===activeConv.id ? ' active' : '');
+    item.innerHTML = `
+      <div class="conv-av ${c.isAI?'ai':''}">${c.av}</div>
+      <div class="conv-info">
+        <div class="conv-name">${c.name}</div>
+        <div class="conv-prev">${c.preview}</div>
+      </div>
+      <div class="conv-meta"><span class="conv-time">${c.time}</span></div>`;
+    item.addEventListener('click', () => { activeConv = c; openConv(c.id, convs); });
+    scroll.appendChild(item);
+  });
+}
+
+function openConv(id, convList) {
+  const c = convList.find(x => x.id===id);
+  if (!c) return;
+  activeConv = c;
+
+  const headAv = document.getElementById('headAv');
+  headAv.innerHTML  = c.av;
+  headAv.className  = 'conv-av' + (c.isAI?' ai':'');
+  document.getElementById('headName').textContent = c.name;
+  document.getElementById('headSub').textContent  = c.isAI ? 'Smart real-estate advisor • Always available' : 'Property Enquiry';
+  document.getElementById('aiBadge').style.display= c.isAI ? 'flex' : 'none';
+
+  const inp = document.getElementById('msgInput');
+  inp.disabled = false;
+  inp.placeholder = c.isAI ? 'Ask anything — EMI, locations, tips, documents…' : `Message ${c.name}…`;
+  document.getElementById('sendBtn').disabled = false;
+
+  const body = document.getElementById('chatBody');
+  body.innerHTML = '';
+
+  if (c.isAI && c.msgs.length === 0) {
+    addWelcomeCard();
+    showSugg(defaultSugg);
+  } else {
+    c.msgs.forEach(m => addBubble(m.text, m.me, c.isAI, m.time, false));
+  }
+  body.scrollTop = body.scrollHeight;
+  renderList(convList);
+}
+
+async function sendMsg() {
+  const inp  = document.getElementById('msgInput');
+  const text = inp.value.trim();
+  if (!text || !activeConv || aiTyping) return;
+  addBubble(text, true, false, ts(), true);
+  inp.value = '';
+  showSugg([]);
+
+  if (activeConv.isAI) {
+    handleAIResponse(text);
+  } else {
+    // Guard: receiver_id must not be null
+    if (!activeConv.participant_id) {
+      showToast('Cannot send message: property owner not found.', 'error');
+      return;
+    }
+    const ok = await Store.sendMessage(activeConv.participant_id, text, activeConv.property_id);
+    if (ok) setTimeout(() => init(), 500);
+  }
+}
+
+/* ─── AI Brain ───────────────────────────────────── */
+const defaultSugg = ['💰 Calculate EMI', '🏙️ Properties in Mumbai', '📋 Required documents', '📈 Market trends'];
+
+function handleAIResponse(userMsg) {
+  aiTyping = true;
+  setInputState(false);
+  const m = userMsg.toLowerCase();
+
+  // Extract context clues
+  const cities = ['mumbai','delhi','bangalore','pune','hyderabad','chennai','noida','gurgaon','kolkata','ahmedabad'];
+  cities.forEach(c => { if (m.includes(c)) chatCtx.city = c.charAt(0).toUpperCase()+c.slice(1); });
+  const bhkMatch = m.match(/(\d)\s*bhk/);
+  if (bhkMatch) chatCtx.bhk = parseInt(bhkMatch[1]);
+  const budgetMatch = m.match(/(\d+)\s*(l|lakh|cr|crore)/i);
+  if (budgetMatch) chatCtx.budget = budgetMatch[0];
+
+  const delay = 600 + Math.random() * 800;
+  setTimeout(showTyping, 300);
+
+  setTimeout(async () => {
+    hideTyping();
+
+    // ── Route to handler ──
+    if (m.match(/\b(hi|hello|hey|namaste|hii|howdy)\b/)) {
+      greeting();
+    } else if (m.match(/emi|loan|instalment|installment/)) {
+      emiFlow(m);
+    } else if (m.match(/map|location|area|where|locality/)) {
+      mapFlow(m);
+    } else if (m.match(/buy|purchase|invest|investment/)) {
+      buyingAdvice(m);
+    } else if (m.match(/rent|rental|lease|tenant/)) {
+      rentingAdvice(m);
+    } else if (m.match(/document|doc|paper|agreement|registry|register/)) {
+      documentGuide();
+    } else if (m.match(/vastu|direction|north|south|east|west|feng shui/)) {
+      vastuTips();
+    } else if (m.match(/price|cost|rate|afford|budget|cheap|expensive/)) {
+      priceAdvice(m);
+    } else if (m.match(/market|trend|2024|2025|future|forecast|appreciation/)) {
+      marketTrends();
+    } else if (m.match(/compare|vs|versus|differ/)) {
+      compareHelp();
+    } else if (m.match(/negotiat|bargain|discount|deal|offer/)) {
+      negotiationTips();
+    } else if (m.match(/tax|gst|stamp duty|tds|income tax/)) {
+      taxGuide();
+    } else if (m.match(/apartment|flat|villa|house|plot|commercial/)) {
+      propertyTypeGuide(m);
+    } else if (m.match(/school|hospital|metro|transport|commute|infrastructure/)) {
+      nearbyGuide(m);
+    } else if (m.match(/bhk|bedroom|1 bed|2 bed|3 bed|studio/)) {
+      bhkGuide(m);
+    } else if (m.match(/show|list|find|search|property|properties|available/)) {
+      await showProperties(m);
+    } else if (m.match(/thank|thanks|great|awesome|perfect|nice|good/)) {
+      thankYou();
+    } else if (m.match(/help|what can you|feature|option|menu/)) {
+      helpMenu();
+    } else if (m.match(/fraud|scam|fake|cheat|safe|verify|trust/)) {
+      fraudAlert();
+    } else if (m.match(/rera|legal|rule|law|regulation/)) {
+      reraInfo();
+    } else if (m.match(/calculator|calc|compute/)) {
+      calcHelp();
+    } else {
+      fallback(userMsg);
+    }
+
+    aiTyping = false;
+    setInputState(true);
+    document.getElementById('msgInput').focus();
+  }, delay);
+}
+
+/* ─── Response Handlers ──────────────────────────── */
+function greeting() {
+  const name = currentUser?.full_name?.split(' ')[0] || 'there';
+  reply(`Hey ${name}! 👋 Great to see you here!\n\nI'm your personal AI Property Assistant. I can help you with:\n\n💰 **EMI & Loan Calculations**\n🏘️ **Finding the right property**\n📍 **Location & map insights**\n📋 **Document checklist**\n📈 **Market trends & investment tips**\n🏛️ **Vastu guidelines**\n⚖️ **Negotiation strategies**\n\nWhat are you looking for today? Buy, rent or invest?`,
+    ['💰 Calculate EMI', '🏘️ Show properties', '📋 Documents needed', '📈 Investment tips']);
+}
+
+function emiFlow(m) {
+  reply(`Sure! Let me open the **EMI Calculator** for you. 🧮\n\nJust enter your loan details below and I'll calculate your monthly payment instantly!`);
+  addEMICard();
+  showSugg(['🏙️ Properties under 50L', '📊 Market trends', '🏦 Home loan tips', '📋 Documents needed']);
+}
+
+function mapFlow(m) {
+  const city = chatCtx.city || extractCity(m) || 'Mumbai';
+  reply(`📍 Here's the map view for **${city}**! You can explore the locality, check nearby amenities and plan your commute.`, []);
+  addMapCard(city);
+  showSugg([`🏘️ Properties in ${city}`, '🏫 Nearby schools', '🏥 Hospitals nearby', '🚇 Metro connectivity']);
+}
+
+function buyingAdvice(m) {
+  reply(`Great choice to buy! Here's my **step-by-step buying guide**: 🏠\n\n**Step 1 — Budget Planning**\nDecide your budget including down payment (20%), EMI comfort zone + buffer 10%.\n\n**Step 2 — Location Research**\nCheck infrastructure growth, metro/school proximity, resale value trends.\n\n**Step 3 — Property Shortlist**\nVisit 5-6 properties. Compare per sqft rates, builder reputation, amenities.\n\n**Step 4 — Legal Verification**\nCheck RERA registration, clear title deed, NOC from bank, encumbrance certificate.\n\n**Step 5 — Negotiation**\nMost sellers have 5-10% buffer. Don't hesitate to negotiate!\n\n**Step 6 — Home Loan**\nPre-approve before making an offer. Compare rates from 3+ banks.\n\nWould you like help with any of these steps? 😊`,
+    ['💰 Calculate EMI', '⚖️ Negotiation tips', '📋 Documents needed', '🔍 How to verify property']);
+}
+
+function rentingAdvice(m) {
+  reply(`Here are key **renting tips** to protect yourself as a tenant: 🔑\n\n**Before Signing:**\n✅ Verify owner's identity & property ownership documents\n✅ Check for active legal disputes on the property\n✅ Inspect plumbing, electrical, damp walls thoroughly\n✅ Confirm society maintenance, water & power backup\n\n**Rent Agreement Must-Haves:**\n📝 11-month or 12-month tenure clearly stated\n📝 Lock-in period & notice period terms\n📝 Security deposit amount & refund conditions\n📝 Rent escalation clause (ideally ≤10% per year)\n📝 Who pays for repairs?\n\n**Red Flags 🚩**\n❌ Owner reluctant to show original documents\n❌ Rent far below market rate\n❌ Pressure to pay advance without agreement\n❌ No society approval for tenants`,
+    ['🏘️ Rental properties', '💰 EMI vs Rent calc', '📋 Rental documents', '🚨 Detect fraud']);
+}
+
+function documentGuide() {
+  reply(`📋 **Complete Document Checklist for Property Purchase**\n\n**From Seller/Developer:**\n• Original Title Deed / Sale Deed\n• RERA Registration Certificate\n• Encumbrance Certificate (last 15 years)\n• Property Tax receipts (last 3 years)\n• Approved Building Plan from municipality\n• Occupancy Certificate (OC)\n• Completion Certificate (CC)\n• NOC from Housing Society\n• No-Dues Certificate (maintenance cleared)\n\n**From Your Side (for loan):**\n• Aadhaar + PAN Card\n• 6 months bank statements\n• 3 years ITR + Form 16\n• Salary slips (3 months)\n• Employment letter\n\n**Cost to Budget:**\n💸 Stamp Duty: 5-8% of property value\n💸 Registration: 1%\n💸 Legal charges: ₹10,000-₹50,000\n💸 Loan processing: 0.5-1%\n\nNeed help understanding any document?`,
+    ['🏛️ RERA explained', '💰 Stamp duty calculator', '🔍 Property verification', '📊 Total cost breakdown']);
+}
+
+function vastuTips() {
+  reply(`🧭 **Vastu Shastra Tips for Your Home**\n\n**Best Directions:**\n• Main Entrance → North or East (welcomes prosperity)\n• Master Bedroom → South-West corner\n• Kitchen → South-East (fire element)\n• Puja Room → North-East\n• Children's Room → West or North-West\n\n**Living Room:**\n• Face East or North while sitting\n• Avoid mirrors facing main door\n\n**Bedroom:**\n• Head towards South while sleeping\n• Avoid placing bed under beam\n• No mirror directly facing bed\n\n**General:**\n• Keep North-East corner clean & clutter-free\n• Avoid toilets in North-East\n• Plants like Tulsi, Money Plant → North/North-East\n\n**Note:** Modern architects can accommodate Vastu during construction without major structural changes. Worth discussing with your builder! 🏗️`,
+    ['🏠 Apartment guide', '📋 Documents needed', '🏘️ Show properties', '💰 Calculate EMI']);
+}
+
+function priceAdvice(m) {
+  const city = chatCtx.city || 'major cities';
+  reply(`📊 **Current Property Rates (${city}) — 2025**\n\n**Apartments (per sqft):**\n🏙️ Mumbai Premium: ₹25,000–₹45,000\n🏙️ Bangalore IT Corridor: ₹8,000–₹18,000\n🏙️ Delhi NCR: ₹6,000–₹20,000\n🏙️ Pune: ₹5,500–₹14,000\n🏙️ Hyderabad: ₹4,500–₹12,000\n🏙️ Chennai: ₹5,000–₹13,000\n\n**How to judge if rate is fair:**\n✅ Check 3-4 nearby properties on same platform\n✅ Compare circle rate — below it is suspicious\n✅ Ask for per-sqft breakup (carpet vs built-up)\n✅ Builder vs resale — typically 10-15% difference\n\n**Carpet Area vs Built-up:**\n• Carpet Area = usable floor space\n• Built-up ≈ Carpet + walls (~10% more)\n• Super Built-up ≈ Built-up + common areas (~20-25% more)\n\n💡 Always negotiate on carpet-area rate!`,
+    ['💰 Calculate EMI', '⚖️ Negotiate tips', '📈 Market forecast', '🏘️ Find properties']);
+}
+
+function marketTrends() {
+  reply(`📈 **Indian Real Estate Market — 2025 Outlook**\n\n**Trending Now:**\n📍 Tier-2 cities (Ahmedabad, Indore, Kochi) — 15-20% YoY growth\n📍 Suburban micro-markets near IT corridors skyrocketing\n📍 Green buildings & sustainable homes in high demand\n📍 Co-living spaces growing 30% YoY\n\n**Best ROI Cities (5-year horizon):**\n1. 🥇 Bangalore East — Whitefield, Sarjapur\n2. 🥈 Hyderabad — Gachibowli, Financial District\n3. 🥉 Pune — Hinjewadi, Wakad\n4. 🏅 Navi Mumbai — Panvel, Airoli\n\n**Market Signals:**\n✅ Repo rate stable at 6.5% — home loans affordable\n✅ RERA compliance improving developer trust\n✅ NRI investments at all-time high\n⚠️ Mumbai premium market — slightly overvalued\n⚠️ Luxury segment — slower absorption\n\n**Investment Strategy:**\nBuy ready-to-move properties in established localities for lower risk. Under-construction in metro periphery for high returns (2-3 year horizon).`,
+    ['🏙️ Best investment cities', '💰 ROI calculator', '📋 Investment checklist', '🏘️ Show properties']);
+}
+
+function compareHelp() {
+  reply(`⚖️ **Apartment vs Villa vs Plot — Which suits you?**\n\n| Factor | Apartment | Villa | Plot |\n|--------|-----------|-------|------|\n| **Price** | Low-Mid | High | Medium |\n| **Maintenance** | Shared | Self | None |\n| **Appreciation** | Moderate | High | Highest |\n| **Security** | High | Medium | Low |\n| **Flexibility** | Low | High | Highest |\n| **Loan** | Easy | Easy | Harder |\n\n**Choose Apartment if:** First-time buyer, limited budget, want society amenities.\n\n**Choose Villa if:** Need space, privacy, high investment appetite.\n\n**Choose Plot if:** Long-term investor, planning custom construction, 7+ year horizon.\n\n💡 **Our Recommendation:** Apartment for ≤₹2Cr budget. Villa for ₹2-5Cr. Plot for 7+ year investment with capital.\n\nWant me to show listings for any category?`,
+    ['🏘️ Show Apartments', '🏡 Show Villas', '🌱 Show Plots', '🏢 Commercial spaces']);
+}
+
+function negotiationTips() {
+  reply(`⚖️ **Property Negotiation Masterclass** 🎯\n\n**Before Negotiating:**\n✅ Research 5+ comparable properties in the same area\n✅ Know the circle rate — seller can't go below legally\n✅ Check how long the property has been listed (>60 days = motivated seller)\n✅ Understand seller's urgency — relocation, divorce, debt?\n\n**Tactics That Work:**\n🎯 Start 12-15% below asking price (not less)\n🎯 Point out genuine issues — weathering, old fittings, no parking\n🎯 Offer conditions seller wants — quick close, flexible possession\n🎯 Stay silent after your offer — let them respond first\n🎯 Use banker's pre-approval as proof of seriousness\n\n**When They Push Back:**\n💬 "That works if you include the wardrobes/ACs"\n💬 "I can close in 30 days if you match this price"\n💬 "I need stamp duty covered at this price"\n\n**Walk Away Signal:**\nIf seller won't budge beyond 3%, either they're firm OR the property has hidden issues. Always okay to walk away!\n\n**Typical Negotiable Range:** 5-10% in resale, 3-5% in new projects.`,
+    ['📋 Documents needed', '💰 Final cost estimate', '🔍 Verify property', '⚠️ Red flags to check']);
+}
+
+function taxGuide() {
+  reply(`📊 **Property Taxes & Duties — Complete Guide**\n\n**At Purchase:**\n• Stamp Duty: 4-8% (varies by state & gender)\n  - Women buyers: Often 1-2% discount!\n• Registration: 1% of property value\n• GST on under-construction: 5% (no ITC)\n• GST on affordable housing: 1%\n• Ready-to-move: No GST\n\n**Annual Taxes:**\n• Property Tax: 0.1-0.3% of assessed value (varies by city)\n• Pay on time — penalties add up fast!\n\n**On Sale (Capital Gains):**\n• Short-Term (<2 years): Added to income, taxed at slab rate\n• Long-Term (>2 years): 20% with indexation benefit\n• Save tax: Reinvest in another property (Sec 54) or bonds (Sec 54EC)\n\n**Home Loan Tax Benefits:**\n• Principal Repayment: Upto ₹1.5L under Sec 80C\n• Interest: Upto ₹2L under Sec 24(b)\n• First-time buyer bonus: Additional ₹50K under Sec 80EE\n\n💡 A good CA can save you ₹50,000-₹2,00,000 in tax — worth the consultation fee!`,
+    ['💰 Calculate total cost', '📋 All documents', '📈 Investment returns', '🏛️ RERA rules']);
+}
+
+function propertyTypeGuide(m) {
+  if (m.includes('apartment') || m.includes('flat')) {
+    reply(`🏢 **Apartment Buying Guide**\n\n**Types of Apartments:**\n• Studio: 300-500 sqft — perfect for singles/couples, best rental yield\n• 1 BHK: 500-700 sqft — starter home, great for investment\n• 2 BHK: 800-1200 sqft — most popular, easiest to sell/rent\n• 3 BHK: 1200-1800 sqft — family home, premium pricing\n• 4+ BHK: 1800+ sqft — luxury segment\n\n**What to Check:**\n✅ Floor (middle floors best — not too low, not too high)\n✅ Ventilation & natural light (corner units are premium)\n✅ Society age & maintenance quality\n✅ Parking — covered vs open, distance to lift\n✅ Water supply continuity\n✅ Power backup coverage (full or partial?)\n\n**Red Flags:**\n❌ Too many floors for the plot size\n❌ Building older than 25 years without renovation\n❌ Watermarks/dampness on walls\n❌ Society in financial dispute`);
+  } else if (m.includes('villa')) {
+    reply(`🏡 **Villa Buying Guide**\n\nVillas offer privacy, space, customization and the best long-term appreciation.\n\n**Key Questions to Ask:**\n✅ Is it independent or part of a gated community?\n✅ Who owns the land — leasehold or freehold?\n✅ Are common facilities (pool, gym) properly maintained?\n✅ What's the HOA fee? Is it sustainable?\n✅ RERA registered? Builder track record?\n\n**Typical Villa Sizes:**\n• 2 BHK Villa: 1500-2000 sqft\n• 3 BHK Villa: 2000-3000 sqft\n• 4 BHK Villa: 3000-5000 sqft\n\n**Best Villa Locations 2025:**\n🥇 Whitefield, Bangalore\n🥈 Jubilee Hills, Hyderabad\n🥉 Koregaon Park, Pune`);
+  } else if (m.includes('plot')) {
+    reply(`🌱 **Plot Investment Guide**\n\nPlots offer the highest appreciation but require patience.\n\n**Always Check:**\n✅ Land use: Residential/Commercial/Agricultural? (can't build on agriculture)\n✅ Clear title — no 50-year litigation history\n✅ Conversion certificate if converted from agriculture\n✅ DTCP/BDA/HMDA/RERA approval\n✅ Road access (minimum 30 feet wide road preferred)\n✅ Drainage & water supply feasibility\n\n**Investment Horizon:**\n• 3-5 years: 20-30% appreciation expected\n• 7-10 years: 2-3x in growing corridors\n• Plot near infrastructure projects: 40-50% jump possible\n\n**Best Plot Locations:**\nSarjapur Road (Bangalore), ORR (Hyderabad), Panvel (Mumbai), Yamuna Expressway (Delhi NCR)`);
+  } else {
+    reply(`🏢 **Commercial Property Guide**\n\nCommercial properties offer 6-12% rental yields vs 2-4% for residential.\n\n**Types:**\n• Office Space: IT parks, co-working\n• Retail: High street, malls, showrooms\n• Warehouse/Industrial: E-commerce boom makes this hot!\n• Hospitality: Hotels, serviced apartments\n\n**Why Commercial?**\n✅ Higher rental yields\n✅ Longer lease terms (3-9 years)\n✅ Tenants pay maintenance\n✅ Annual escalation clauses standard\n\n**Risks:**\n⚠️ Higher initial investment\n⚠️ Vacancy periods can be long\n⚠️ Market-dependent demand`);
+  }
+  showSugg(['🏘️ Show listings', '💰 Calculate ROI', '📋 Documents needed', '⚖️ Negotiation tips']);
+}
+
+function nearbyGuide(m) {
+  const city = chatCtx.city || 'your city';
+  if (m.includes('school')) {
+    reply(`🏫 **Best School Zones in ${city}**\n\nProximity to good schools adds 15-25% property premium!\n\n**Mumbai:** Bandra, Juhu, Powai (DPS, Bombay Scottish)\n**Bangalore:** Indiranagar, Koramangala, Whitefield\n**Delhi NCR:** Vasant Kunj, Greater Kailash, South Extension\n**Pune:** Koregaon Park, Aundh, Baner\n**Hyderabad:** Banjara Hills, Jubilee Hills, Gachibowli\n\n**What to Check:**\n✅ CBSE/ICSE/IB schools within 3 km\n✅ Distance matters — under 2 km ideal for kids\n✅ Check school rating on Google Maps\n✅ Morning traffic — do a trial commute!`);
+  } else if (m.includes('hospital')) {
+    reply(`🏥 **Medical Infrastructure — Why It Matters**\n\nProximity to multi-specialty hospitals adds 10-20% property value.\n\n**Premium Medical Zones:**\n• Mumbai: Breach Candy, Bandra\n• Bangalore: Jayanagar, Indiranagar\n• Delhi: South Delhi, Dwarka\n• Hyderabad: Banjara Hills\n\n**What to Look For:**\n✅ Multi-speciality hospital within 5 km\n✅ 24-hour emergency access road\n✅ Pharmacy & diagnostic lab nearby\n✅ Future hospital projects in the area`);
+  } else {
+    reply(`🚇 **Infrastructure & Connectivity Guide**\n\nConnectivity is the #1 factor in property appreciation!\n\n**Metro Adjacency Effect:**\n• Within 500m: 20-30% premium\n• 500m-1km: 10-15% premium\n• 1-2km walkable: 5-10% premium\n\n**Upcoming Metro Projects (buy NOW before prices jump):**\n🚇 Mumbai Metro Line 3, 4, 7A\n🚇 Bangalore Metro Phase 3\n🚇 Hyderabad Metro expansion\n🚇 Delhi Metro Phase 4\n🚇 Pune Metro\n\n**Airport Connectivity:**\nProperties near new airport zones like Navi Mumbai Airport, Jewar (Noida) are expected to 2X in 5 years.\n\nWant me to show properties near a specific metro line?`);
+  }
+  showSugg(['🏘️ Show nearby properties', '📈 Appreciation forecast', '🗺️ View on map', '💰 Calculate EMI']);
+}
+
+function bhkGuide(m) {
+  reply(`🛏️ **BHK Selection Guide — Which Size for You?**\n\n| Size | Area | Best For | Avg Rent (Bangalore) |\n|------|------|----------|----------------------|\n| Studio | 300-500 sqft | Singles, investment | ₹12,000-18,000 |\n| 1 BHK | 500-750 sqft | Couples, WFH | ₹15,000-28,000 |\n| 2 BHK | 800-1200 sqft | Small family | ₹25,000-55,000 |\n| 3 BHK | 1200-1800 sqft | Family of 4-5 | ₹40,000-90,000 |\n| 4 BHK | 1800-2800 sqft | Large family | ₹70,000-1,50,000 |\n\n**Investment Perspective:**\n🏆 2 BHK = Highest liquidity (easiest to sell/rent)\n🥈 3 BHK = Best appreciation in growing cities\n🥉 1 BHK = Best rental yield % (8-10% in some markets)\n\n**Rule of Thumb:** Family size + 1 bedroom = ideal space for 10+ years comfort.`,
+    ['🏘️ Show 2 BHK listings', '🏘️ Show 3 BHK listings', '💰 Calculate EMI', '📈 Rental yield calc']);
+}
+
+async function showProperties(m) {
+  let filtered = [...allProps];
+  const city = chatCtx.city || extractCity(m);
+  const bhk  = chatCtx.bhk;
+
+  if (m.includes('rent')) filtered = filtered.filter(p => p.listingType==='Rent');
+  if (m.includes('sale') || m.includes('buy')) filtered = filtered.filter(p => p.listingType==='Sale');
+  if (city) filtered = filtered.filter(p => (p.location||'').toLowerCase().includes(city.toLowerCase()));
+  if (bhk)  filtered = filtered.filter(p => p.bedrooms===bhk);
+  if (m.includes('villa')) filtered = filtered.filter(p => p.category==='Villa');
+  if (m.includes('apartment')||m.includes('flat')) filtered = filtered.filter(p => p.category==='Apartment');
+  if (m.includes('deal')) filtered = filtered.filter(p => p.dealScore==='Great Deal');
+
+  filtered = filtered.slice(0, 4);
+
+  if (filtered.length === 0) {
+    reply(`🔍 I couldn't find properties matching that criteria right now, but let me suggest some alternatives.\n\nTry browsing all listings on the homepage — use the filters to narrow by price, type and BHK.`,
+      ['🏘️ Browse all listings', '💰 Adjust budget', '📈 Market trends', '🗺️ View by city']);
+    return;
+  }
+
+  const label = city ? `in ${city}` : 'matching your criteria';
+  reply(`✨ Found **${filtered.length} properties** ${label}! Here are the top picks for you:`);
+  filtered.forEach(prop => addPropertyCard(prop));
+  showSugg(['💰 Calculate EMI for these', '❤️ Save to favorites', '🔍 Show more', '📋 Documents checklist']);
+}
+
+function thankYou() {
+  reply(`You're very welcome! 😊 Happy to help anytime.\n\nIs there anything else you'd like to know? I can help with:\n• Finding more properties\n• Calculating EMI & costs\n• Investment advice\n• Market analysis\n\nGood luck with your property journey! 🏠✨`,
+    ['🏘️ Show properties', '💰 Calculate EMI', '📈 Market trends', '❤️ Add to favorites']);
+}
+
+function helpMenu() {
+  reply(`🤖 **Here's everything I can help you with:**\n\n**🏠 Property Search**\nSay: *"Show 2 BHK in Bangalore"*, *"Rental properties under 30K"*\n\n**💰 Financial Calculations**\nSay: *"Calculate EMI for 60 lakh"*, *"What's the total cost to buy?"*\n\n**📋 Legal & Documents**\nSay: *"Documents required"*, *"RERA explained"*, *"Stamp duty guide"*\n\n**📍 Location Insights**\nSay: *"Show Mumbai map"*, *"Best areas in Bangalore"*, *"Near metro"*\n\n**📈 Investment Advice**\nSay: *"Market trends 2025"*, *"Best city to invest"*, *"Compare apartment vs plot"*\n\n**🧭 Lifestyle**\nSay: *"Vastu tips"*, *"School zone"*, *"Hospital proximity"*\n\n**⚖️ Strategy**\nSay: *"Negotiation tips"*, *"Rent vs buy"*, *"How to detect fraud"*\n\nJust type naturally — I understand plain English! 😊`,
+    ['🏘️ Show properties', '💰 Calculate EMI', '📋 Documents needed', '📈 Investment tips']);
+}
+
+function fraudAlert() {
+  reply(`🚨 **Property Fraud Alert — How to Stay Safe**\n\n**Common Scams:**\n❌ Duplicate property sold to multiple buyers\n❌ Power of Attorney misuse — seller not actual owner\n❌ Forged documents (stamp paper, title deeds)\n❌ Encumbered property sold without disclosing existing loan\n❌ Agricultural land sold as residential\n❌ Floor plan deviations from approved plan\n\n**How to Verify (Checklist):**\n✅ Check Encumbrance Certificate at Sub-Registrar office\n✅ Verify seller's Aadhaar + title deed match\n✅ Search RERA portal for developer registration\n✅ Get independent legal opinion from enrolled advocate\n✅ Request 30-year title chain (who owned it before)\n✅ Check municipal records for unauthorized construction\n\n**Golden Rule:** Never pay more than 10% token amount before full document verification. Legitimate sellers won't pressure you.\n\n📞 In doubt? Call RERA helpline or local consumer court.`,
+    ['🏛️ RERA explained', '📋 Document checklist', '⚖️ Negotiation tips', '🔍 Search safely']);
+}
+
+function reraInfo() {
+  reply(`🏛️ **RERA — Real Estate Regulatory Authority**\n\n**What is RERA?**\nRERA (Real Estate Regulatory Act, 2016) protects home buyers from developer fraud and project delays.\n\n**Key Buyer Rights Under RERA:**\n✅ Developer must deposit 70% funds in escrow\n✅ Carpet area must be accurately disclosed\n✅ Possession date must be legally binding\n✅ 5-year defect liability after possession\n✅ Delay compensation: 10.25% interest per annum\n✅ Full refund + interest if project cancelled\n\n**How to Check RERA Status:**\n🔗 Maharashtra: maharera.mahaonline.gov.in\n🔗 Karnataka: rera.karnataka.gov.in\n🔗 Delhi: rera.delhi.gov.in\n🔗 All states: up to date at hudco.org\n\n**What to Verify:**\n• Project registration number (format: MAHA/xx/xxxx)\n• Developer's past project delivery record\n• Complaints filed against the developer\n\n⚠️ Never buy from an unregistered project — no legal protection!`,
+    ['📋 Full document checklist', '🚨 Fraud detection', '💰 Calculate total cost', '🏘️ RERA projects']);
+}
+
+function calcHelp() {
+  reply(`🧮 **Let me open the EMI calculator for you!**\n\nYou can also check our full **Calculators Page** which has:\n• EMI Calculator\n• Affordability Calculator\n• Rent vs Buy Comparison\n• Investment ROI Calculator\n• Stamp Duty Estimator`);
+  addEMICard();
+  showSugg(['🏘️ Properties in my budget', '📊 Total purchase cost', '💹 Investment returns', '🏦 Best banks for home loan']);
+}
+
+function fallback(userMsg) {
+  const responses = [
+    `That's an interesting question! Based on what I know about real estate, let me share some thoughts.\n\nCould you be more specific? For example:\n• Are you looking to **buy**, **sell** or **rent**?\n• Which **city** are you interested in?\n• What's your **budget range**?\n\nThe more details you share, the better I can help! 😊`,
+    `Great question! Real estate is a complex domain.\n\nI'm best at helping with:\n• 💰 EMI & financial planning\n• 🏘️ Finding properties\n• 📋 Legal documents\n• 📈 Investment advice\n• 🗺️ Location insights\n\nCould you rephrase your question with one of these topics?`,
+    `Hmm, let me think about that! I'm still learning new things about real estate every day.\n\nMeanwhile, could you try asking about **property prices**, **documents needed**, **EMI calculation** or **investment tips**? I'll give you a detailed answer right away! 🏠`
+  ];
+  const r = responses[Math.floor(Math.random()*responses.length)];
+  reply(r, ['🏘️ Show properties', '💰 Calculate EMI', '📋 Documents needed', '❓ What can you do?']);
+}
+
+/* ─── UI Components ──────────────────────────────── */
+function reply(text, suggs=[]) {
+  // Convert **bold** markdown
+  const html = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  const body = document.getElementById('chatBody');
+  const wrap = document.createElement('div');
+  wrap.className = 'bw them ai';
+  wrap.innerHTML = `<div class="bbl" style="max-width:520px;">${html}</div><span class="btime">${ts()}</span>`;
+  body.appendChild(wrap);
+  body.scrollTop = body.scrollHeight;
+  if (suggs.length) showSugg(suggs);
+}
+
+function addWelcomeCard() {
+  const body = document.getElementById('chatBody');
+  const wrap = document.createElement('div');
+  wrap.className = 'bw them ai';
+  const name = currentUser?.full_name?.split(' ')[0] || 'there';
+  wrap.innerHTML = `<div class="bbl" style="max-width:100%;padding:20px;">
+    <div style="font-size:1.5rem;margin-bottom:8px;">🤖✨</div>
+    <div style="font-size:1rem;font-weight:800;margin-bottom:6px;color:#c8e8d0;">Hey ${name}! I'm your AI Property Assistant</div>
+    <div style="font-size:0.82rem;color:#7a9a82;line-height:1.7;">
+      I can help you with <strong style="color:#22c55e">EMI calculations</strong>, <strong style="color:#22c55e">property search</strong>, <strong style="color:#22c55e">market trends</strong>, <strong style="color:#22c55e">legal documents</strong>, <strong style="color:#22c55e">investment advice</strong> and much more!<br><br>
+      Just type your question in plain English — I understand everything! 😊
+    </div>
+    <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:6px;">
+      ${['💰 EMI Calc','🏘️ Find Properties','📋 Documents','📈 Markets','🧭 Vastu Tips','🚨 Fraud Check'].map(t=>`<span style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#22c55e;padding:3px 10px;border-radius:12px;font-size:0.7rem;font-weight:600;">${t}</span>`).join('')}
+    </div>
+  </div>`;
+  body.appendChild(wrap);
+}
+
+function addBubble(text, isMe, isAI, time, scroll) {
+  const body = document.getElementById('chatBody');
+  const wrap = document.createElement('div');
+  wrap.className = `bw ${isMe?'me':'them'} ${isAI?'ai':''}`;
+  wrap.innerHTML = `<div class="bbl">${text}</div><span class="btime">${time}</span>`;
+  body.appendChild(wrap);
+  if (scroll) body.scrollTop = body.scrollHeight;
+}
+
+function addPropertyCard(prop) {
+  const body = document.getElementById('chatBody');
+  const wrap = document.createElement('div');
+  wrap.className = 'bw them ai';
+  const price = formatCurrency ? formatCurrency(prop.price) : '₹'+prop.price;
+  const dealColor = {'Great Deal':'#22c55e','Fair Price':'#e6b94a','Overpriced':'#ef4444'}[prop.dealScore]||'#666';
+  wrap.innerHTML = `
+    <div class="ai-card" style="max-width:280px;">
+      <img src="${prop.image||'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400'}" 
+           onerror="this.src='https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400'"
+           style="width:100%;height:130px;object-fit:cover;border-radius:8px;display:block;">
+      <div style="margin-top:10px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="background:${prop.listingType==='Rent'?'rgba(34,197,94,0.15)':'rgba(59,130,246,0.15)'};color:${prop.listingType==='Rent'?'#22c55e':'#3b82f6'};padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">${prop.listingType||'Sale'}</span>
+          ${prop.dealScore?`<span style="background:rgba(0,0,0,0.3);color:${dealColor};padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">${prop.dealScore}</span>`:''}
+        </div>
+        <div class="ai-card-title">${prop.title}</div>
+        <div style="font-size:0.72rem;color:#667;margin-bottom:4px;">📍 ${prop.location||prop.city||''}</div>
+        <div style="display:flex;gap:8px;font-size:0.7rem;color:#666;margin-bottom:8px;">
+          ${prop.bedrooms?`🛏 ${prop.bedrooms} BHK`:''}
+          ${prop.area?`📐 ${prop.area} sqft`:''}
+        </div>
+        <div class="ai-card-price">${price}</div>
+        <a href="property-detail?id=${prop.id}" style="display:block;width:100%;padding:7px;background:rgba(230,185,74,0.1);border:1px solid rgba(230,185,74,0.3);color:#e6b94a;border-radius:6px;font-size:0.75rem;font-weight:600;text-align:center;text-decoration:none;box-sizing:border-box;transition:all 0.2s;">View Details →</a>
+      </div>
+    </div>`;
+  body.appendChild(wrap);
+  body.scrollTop = body.scrollHeight;
+}
+
+function addEMICard() {
+  const body = document.getElementById('chatBody');
+  const wrap = document.createElement('div');
+  wrap.className = 'bw them ai';
+  wrap.innerHTML = `
+    <div class="feat-card" style="max-width:340px;">
+      <h4>💰 EMI Calculator</h4>
+      <label>Loan Amount (₹ Lakhs)</label>
+      <input type="number" id="emiLoan" value="50" min="1" max="1000" oninput="calcEMI()" style="margin-bottom:0;">
+      <div class="fc-row" style="margin-top:10px;">
+        <div>
+          <label>Interest Rate (%)</label>
+          <input type="number" id="emiRate" value="8.5" step="0.1" min="1" max="25" oninput="calcEMI()">
+        </div>
+        <div>
+          <label>Tenure (Years)</label>
+          <input type="number" id="emiYears" value="20" min="1" max="30" oninput="calcEMI()">
+        </div>
+      </div>
+      <div id="emiResult" class="fc-result">
+        <strong>Monthly EMI: ₹38,911</strong><br>
+        Total Interest: ₹43.39L<br>
+        Total Payment: ₹93.39L<br>
+        <small style="color:#667;font-size:0.72rem;">Based on ₹50L loan @ 8.5% for 20 years</small>
+      </div>
+      <button class="fc-btn" onclick="window.location.href='calculators.html'">Open Full Calculator →</button>
+    </div>`;
+  body.appendChild(wrap);
+  body.scrollTop = body.scrollHeight;
+}
+
+function calcEMI() {
+  const P = (+document.getElementById('emiLoan').value || 50) * 100000;
+  const r = (+document.getElementById('emiRate').value || 8.5) / 12 / 100;
+  const n = (+document.getElementById('emiYears').value || 20) * 12;
+  if (!P || !r || !n) return;
+  const emi = Math.round(P * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1));
+  const total = emi * n;
+  const interest = total - P;
+  const fmt = v => v >= 10000000 ? (v/10000000).toFixed(2)+'Cr' : v >= 100000 ? (v/100000).toFixed(2)+'L' : v.toLocaleString('en-IN');
+  const el = document.getElementById('emiResult');
+  if (el) el.innerHTML = `<strong>Monthly EMI: ₹${emi.toLocaleString('en-IN')}</strong><br>Total Interest: ₹${fmt(interest)}<br>Total Payment: ₹${fmt(total)}<br><small style="color:#667;font-size:0.72rem;">Based on ₹${fmt(P)} @ ${document.getElementById('emiRate').value}% for ${document.getElementById('emiYears').value} years</small>`;
+}
+
+function addMapCard(city) {
+  const body = document.getElementById('chatBody');
+  const wrap = document.createElement('div');
+  wrap.className = 'bw them ai';
+  wrap.innerHTML = `
+    <div class="feat-card" style="max-width:440px;">
+      <h4>🗺️ Map — ${city}</h4>
+      <div class="map-frame">
+        <iframe src="https://maps.google.com/maps?q=${encodeURIComponent(city+' real estate')}&output=embed" loading="lazy"></iframe>
+      </div>
+      <div style="margin-top:8px;font-size:0.72rem;color:#666;">Explore the area, check connectivity and nearby amenities.</div>
+      <a href="home.html" style="display:block;margin-top:10px;text-align:center;font-size:0.75rem;color:#e6b94a;font-weight:600;text-decoration:none;">View Properties in ${city} →</a>
+    </div>`;
+  body.appendChild(wrap);
+  body.scrollTop = body.scrollHeight;
+}
+
+function showSugg(arr) {
+  const row = document.getElementById('suggRow');
+  row.innerHTML = '';
+  if (!arr || !arr.length) { row.style.display='none'; return; }
+  arr.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'sugg-chip';
+    btn.textContent = s;
+    btn.onclick = () => {
+      document.getElementById('msgInput').value = s;
+      sendMsg();
+    };
+    row.appendChild(btn);
+  });
+  row.style.display = 'flex';
+}
+
+function showTyping() {
+  const body = document.getElementById('chatBody');
+  const div  = document.createElement('div');
+  div.id = 'typingWrap'; div.className = 'bw them ai';
+  div.innerHTML = '<div class="typing-bbl"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById('typingWrap');
+  if (t) t.remove();
+}
+
+function setInputState(enabled) {
+  document.getElementById('sendBtn').disabled  = !enabled;
+  document.getElementById('msgInput').disabled = !enabled;
+}
+
+function resetAIChat() {
+  if (activeConv && activeConv.isAI) {
+    activeConv.msgs = [];
+    chatCtx = { city:null, budget:null, category:null, bhk:null };
+    const body = document.getElementById('chatBody');
+    body.innerHTML = '';
+    addWelcomeCard();
+    showSugg(defaultSugg);
+  }
+}
+
+/* ─── Helpers ────────────────────────────────────── */
+function extractCity(m) {
+  const cities = ['mumbai','delhi','bangalore','bengaluru','pune','hyderabad','chennai','noida','gurgaon','gurugram','kolkata','ahmedabad','jaipur','kochi','lucknow'];
+  for (const c of cities) {
+    if (m.includes(c)) return c.charAt(0).toUpperCase()+c.slice(1);
+  }
+  return null;
+}
+
+function ts(date) {
+  const d = date ? new Date(date) : new Date();
+  return d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+
+/* ─── Theme ──────────────────────────────────────── */
+function initTheme() {
+  const theme = localStorage.getItem('re_theme') || 'dark';
+  document.body.className = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.body.className = next;
+  localStorage.setItem('re_theme', next);
+  document.getElementById('themeToggle').textContent = next==='dark' ? '🌙' : '☀️';
+});
+
+document.getElementById('msgInput').addEventListener('keypress', e => { if (e.key==='Enter') sendMsg(); });
+
+initTheme();
+init();
+</script>
+</body>
+</html>

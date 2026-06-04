@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In - RealEstate</title>
+<script>
+// NUCLEAR: Kill all service workers and clear all caches immediately
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(r) { r.unregister(); });
+  });
+}
+if ('caches' in window) {
+  caches.keys().then(function(names) {
+    names.forEach(function(n) { caches.delete(n); });
+  });
+}
+</script>
+
+<!-- Tailwind CDN & Custom config for shadcn design variables -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="tailwind-config.js"></script>
+<link rel="stylesheet" href="style.css">
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+/* OTP boxes */
+.otp-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 18px 0 6px;
+}
+.otp-box {
+  width: 50px;
+  height: 58px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: #e6b94a;
+  background: #1a1c1e;
+  border: 1.5px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.18s ease;
+  caret-color: #e6b94a;
+}
+.otp-box:focus {
+  border-color: #e6b94a;
+  background: rgba(230,185,74,0.05);
+  box-shadow: 0 0 0 3px rgba(230,185,74,0.1);
+}
+.otp-box.filled { border-color: rgba(230,185,74,0.45); }
+.otp-box.error  { border-color: #c0392b !important; background: rgba(192,57,43,0.06) !important; }
+
+/* Step cards */
+.step { display: none; }
+.step.active { display: block; animation: fadeUp 0.32s ease; }
+
+/* Lock banner */
+.lock-banner {
+  display: none;
+  padding: 12px 16px;
+  background: rgba(192,57,43,0.1);
+  border: 1px solid rgba(192,57,43,0.28);
+  border-radius: 9px;
+  margin-bottom: 18px;
+  font-size: 0.875rem;
+  color: #e05252;
+  text-align: center;
+  line-height: 1.55;
+}
+.lock-banner.show { display: block; }
+
+/* Attempt warning */
+.attempts-left {
+  font-size: 0.8rem;
+  color: #e67e22;
+  text-align: center;
+  margin-top: 8px;
+  display: none;
+}
+
+/* Timer */
+.otp-timer {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #5a5a5a;
+  margin-top: 6px;
+}
+.otp-timer b { color: #e6b94a; font-variant-numeric: tabular-nums; }
+
+/* Resend */
+.resend-btn {
+  background: none;
+  border: none;
+  color: #e6b94a;
+  font-size: 0.875rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.resend-btn:disabled { color: #4a4a4a; cursor: default; text-decoration: none; }
+
+/* Security chips */
+.sec-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.sec-chip {
+  font-size: 0.72rem;
+  color: #4a4a4a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sec-chip em { color: #3d9970; font-style: normal; }
+
+/* Divider */
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  color: #3a3a3a;
+  font-size: 0.8rem;
+}
+.or-divider::before,
+.or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+}
+
+/* Eye toggle button */
+.eye-toggle {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #5a5a5a;
+  cursor: pointer;
+  font-size: 0;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.eye-toggle:hover { color: #e6b94a; }
+.eye-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+<div class="auth-page">
+<div class="auth-card">
+
+  <a href="home.html" class="auth-logo">🏠 RealEstate</a>
+
+  <!--  STEP 1 : LOGIN FORM  -->
+  <div class="step active" id="step1">
+
+    <div class="lock-banner" id="lockBanner">
+      🔒 Account temporarily locked<br>
+      <strong id="lockMsg"></strong><br>
+      <small>15-minute lockout after 5 failed attempts</small>
+    </div>
+
+    <h2 style="text-align:center;margin-bottom:4px;">Welcome Back</h2>
+    <p class="auth-sub">Sign in to your account</p>
+
+    <form id="loginForm" novalidate onsubmit="return false;">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="you@email.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <div style="position:relative;">
+          <input type="password" id="loginPass" placeholder="Enter your password" style="padding-right:42px;" autocomplete="current-password">
+          <button type="button" class="eye-toggle" id="eyeBtn" onclick="toggleEye()" title="Show password" aria-label="Show password">
+            <svg id="eyeIconShow" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="eyeIconHide" viewBox="0 0 24 24" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <div style="text-align:right;margin-top:5px;">
+          <a href="#" onclick="showForgot();return false;" style="font-size:0.8rem;color:#e6b94a;text-decoration:none;">Forgot password?</a>
+        </div>
+      </div>
+
+      <div class="attempts-left" id="attemptsLeft"></div>
+
+      <!-- Remember Me -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem;color:#888;user-select:none;">
+          <input type="checkbox" id="rememberMe" style="width:15px;height:15px;accent-color:#e6b94a;cursor:pointer;">
+          Remember me for 7 days
+        </label>
+        <span id="deviceStatusBadge" style="font-size:0.72rem;color:#666;"></span>
+      </div>
+
+      <button type="submit" class="btn btn-gold btn-full" id="loginBtn">
+        🔑 Sign In &amp; Verify →
+      </button>
+    </form>
+
+    <div class="or-divider">or</div>
+
+    <div class="auth-link-row">Don't have an account? <a href="signup.html">Sign Up</a></div>
+    <div class="auth-link-row" style="margin-top:8px;">
+      <a href="home.html" style="color:var(--text-3);text-decoration:none;font-size:0.82rem;">← Back to Home</a>
+    </div>
+
+    <div class="sec-row">
+      <div class="sec-chip"><em>✓</em> SHA-256</div>
+      <div class="sec-chip"><em>✓</em> 2FA OTP</div>
+      <div class="sec-chip"><em>✓</em> Auto-Lock</div>
+      <div class="sec-chip"><em>✓</em> Session Guard</div>
+    </div>
+  </div>
+
+  <!--  STEP 2 : OTP VERIFY  -->
+  <div class="step" id="step2">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:48px;margin-bottom:10px;">📧</div>
+      <h2>2-Step Verification</h2>
+      <p class="auth-sub" style="margin-bottom:4px;">
+        Verification code sent to:<br>
+        <strong id="emailMask" style="color:#e6b94a;"></strong>
+      </p>
+      <p style="font-size:0.78rem;color:#5a5a5a;">Check your spam/junk folder if not received</p>
+    </div>
+
+    <div class="otp-row" id="otpRow">
+      <input class="otp-box" id="b1" maxlength="1" inputmode="numeric" type="text">
+      <input class="otp-box" id="b2" maxlength="1" inputmode="numeric" type="text">
+      <input class="otp-box" id="b3" maxlength="1" inputmode="numeric" type="text">
+      <input class="otp-box" id="b4" maxlength="1" inputmode="numeric" type="text">
+      <input class="otp-box" id="b5" maxlength="1" inputmode="numeric" type="text">
+      <input class="otp-box" id="b6" maxlength="1" inputmode="numeric" type="text">
+    </div>
+
+    <div class="otp-timer">Expires in: <b id="timerVal">5:00</b></div>
+
+    <button class="btn btn-gold btn-full" id="verifyBtn" onclick="doVerify()" style="margin-top:14px;">
+      ✅ Verify
+    </button>
+
+    <div style="text-align:center;margin-top:12px;font-size:0.875rem;color:#5a5a5a;">
+      Didn't receive the code?
+      <button class="resend-btn" id="resendBtn" onclick="doResend()" disabled>Resend code (30s)</button>
+    </div>
+    <div style="text-align:center;margin-top:10px;">
+      <button onclick="goBack()" style="background:none;border:none;color:#5a5a5a;font-size:0.82rem;cursor:pointer;font-family:inherit;">← Go back</button>
+    </div>
+  </div>
+
+  <!--  STEP 3 : FORGOT PASSWORD  -->
+  <div class="step" id="step3">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:40px;margin-bottom:10px;">🔐</div>
+      <h2>Reset Password</h2>
+      <p class="auth-sub">Enter your registered email address</p>
+    </div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="forgotEmail" placeholder="you@email.com">
+    </div>
+    <button class="btn btn-gold btn-full" id="resetBtn" onclick="sendResetOTP()">📨 Send Reset Link</button>
+    <div style="text-align:center;margin-top:12px;">
+      <button onclick="goBack()" style="background:none;border:none;color:#5a5a5a;font-size:0.82rem;cursor:pointer;font-family:inherit;">← Go back</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+// ================================================================
+//   EMAILJS CONFIG
+//   EJ is already defined in config.js with real keys.
+//   This block is a fallback only if config.js was not loaded.
+// ================================================================
+if (typeof EJ === 'undefined') {
+  window.EJ = {
+    publicKey:  'YOUR_PUBLIC_KEY',
+    serviceId:  'YOUR_SERVICE_ID',
+    templateId: 'YOUR_TEMPLATE_ID',
+  };
+}
+
+// Init EmailJS with real keys from config.js
+try { emailjs.init({ publicKey: EJ.publicKey }); } catch(e) {}
+
+// ─── State ────────────────────────────────────────────────────────
+let loggedEmail = '';
+let loggedUser  = null;
+let timerLoop   = null;
+let resendLoop  = null;
+
+// ─── Auto-redirect if already logged in ──────────────────────────
+(async () => {
+  // Check if we are in the middle of a GitHub OAuth redirect callback
+  const isOAuthCallback = window.location.hash.includes('access_token=') || window.location.search.includes('code=');
+  if (isOAuthCallback) return;
+
+  // If there's already a valid session, user is logged in → go to home
+  const logged = await Auth.isLoggedIn();
+  if (logged) {
+    window.location.href = 'home.html';
+  }
+  // If not logged in, just stay on the login page — do NOT sign out
+  // or clear any session here, as a login might be in progress.
+})();
+
+// ─── Pre-fill remembered email ───────────────────────────────────
+(function() {
+  try {
+    if (typeof RememberMe !== 'undefined') {
+      const saved = RememberMe.load();
+      if (saved) {
+        document.getElementById('loginEmail').value = saved;
+        document.getElementById('rememberMe').checked = true;
+      }
+    }
+  } catch(e) {}
+})();
+
+// ================================================================
+// HELPER FUNCTIONS
+// ================================================================
+
+/** Toggle password visibility on the login password field */
+function toggleEye() {
+  const inp = document.getElementById('loginPass');
+  const btn = document.getElementById('eyeBtn');
+  const iconShow = document.getElementById('eyeIconShow');
+  const iconHide = document.getElementById('eyeIconHide');
+  if (!inp || !btn) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    if (iconShow) iconShow.style.display = 'none';
+    if (iconHide) iconHide.style.display = 'block';
+    btn.title = 'Hide password';
+    btn.setAttribute('aria-label', 'Hide password');
+  } else {
+    inp.type = 'password';
+    if (iconShow) iconShow.style.display = 'block';
+    if (iconHide) iconHide.style.display = 'none';
+    btn.title = 'Show password';
+    btn.setAttribute('aria-label', 'Show password');
+  }
+}
+
+/** Mask email for display: a****@gmail.com */
+function maskEmail(email) {
+  if (!email || !email.includes('@')) return email;
+  const [name, domain] = email.split('@');
+  const visible = name.slice(0, Math.min(2, name.length));
+  const masked  = '*'.repeat(Math.max(2, name.length - 2));
+  return visible + masked + '@' + domain;
+}
+
+/** Collect current OTP from the 6 boxes */
+function getOTP() {
+  return [1,2,3,4,5,6].map(i => document.getElementById('b'+i).value).join('');
+}
+
+/** Wire up OTP box keyboard / paste behaviour */
+function initBoxes() {
+  const boxes = [1,2,3,4,5,6].map(i => document.getElementById('b' + i));
+  boxes.forEach((box, idx) => {
+    box.addEventListener('input', e => {
+      const val = e.target.value.replace(/\D/g, '');
+      box.value = val.slice(-1);
+      box.classList.toggle('filled', !!box.value);
+      if (val && idx < 5) boxes[idx + 1].focus();
+      if (getOTP().length === 6) doVerify();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && idx > 0) boxes[idx - 1].focus();
+    });
+    box.addEventListener('paste', e => {
+      const p = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+      if (p.length === 6) {
+        p.split('').forEach((c, i) => {
+          boxes[i].value = c;
+          boxes[i].classList.add('filled');
+        });
+        boxes[5].focus();
+        setTimeout(doVerify, 80);
+        e.preventDefault();
+      }
+    });
+  });
+}
+
+/** Shake the OTP boxes to signal an error */
+function shakeBoxes() {
+  const row = document.getElementById('otpRow');
+  if (!row) return;
+  row.style.animation = 'none';
+  row.offsetHeight; // reflow
+  row.style.animation = 'shake 0.4s ease';
+  [1,2,3,4,5,6].forEach(i => {
+    const b = document.getElementById('b' + i);
+    if (b) { b.classList.add('error'); b.value = ''; setTimeout(() => b.classList.remove('error'), 1200); }
+  });
+  const b1 = document.getElementById('b1');
+  if (b1) b1.focus();
+}
+
+/**
+ * Send OTP via EmailJS.
+ * In dev-mode (placeholder key) it shows the code in a toast/alert.
+ */
+async function sendOTP(email, name, otp) {
+  if (!email || !otp) return false;
+
+  if (EJ.publicKey === 'YOUR_PUBLIC_KEY') {
+    // Dev mode – show the OTP in a toast so you can test without EmailJS
+    showToast("🛠 Dev OTP for " + email + ": " + otp, 'info');
+    console.info("[DEV] OTP for " + email + ":", otp);
+    return true; // pretend it was sent
+  }
+
+  try {
+    if (typeof emailjs === 'undefined') {
+      throw new Error("EmailJS library not loaded");
+    }
+    await emailjs.send(EJ.serviceId, EJ.templateId, {
+      to_email: email,
+      to_name:  name || email.split('@')[0],
+      otp_code: otp,
+      app_name: "🏠 RealEstate",
+    });
+    return true;
+  } catch (err) {
+    console.warn('EmailJS error (proceeding in fallback dev mode):', err);
+    showToast("🛠 Dev Mode Fallback: OTP is " + otp, 'info');
+    console.info("[DEV FALLBACK] OTP for " + email + ":", otp);
+    return true; // proceed with login using the fallback OTP
+  }
+}
+
+// ================================================================
+// STEP 1: Login form submit
+// ================================================================
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass  = document.getElementById('loginPass').value;
+
+  clearError(document.getElementById('loginEmail'));
+  clearError(document.getElementById('loginPass'));
+
+  if (!validateEmail(email)) { showError(document.getElementById('loginEmail'), 'Please enter a valid email address'); return; }
+  if (!pass)                  { showError(document.getElementById('loginPass'),  'Password is required'); return; }
+
+  // ── Account lock check ──────────────────────────────────────────
+  if (typeof AccountLock !== 'undefined') {
+    const lockStatus = AccountLock.isLocked(email);
+    if (lockStatus.locked) {
+      document.getElementById('lockBanner').classList.add('show');
+      document.getElementById('lockMsg').textContent = `Try again in ${lockStatus.mins} minute${lockStatus.mins !== 1 ? 's' : ''}.`;
+      showToast(`Account locked. Try again in ${lockStatus.mins} min.`, 'error');
+      return;
+    }
+  }
+
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = '⏳ Authenticating...';
+  btn.disabled    = true;
+
+  try {
+    // 1. Supabase Auth
+    const user = await Auth.login(email, pass);
+
+    // 2. Reset lock on success
+    if (typeof AccountLock !== 'undefined') AccountLock.reset(email);
+    if (typeof RememberMe  !== 'undefined') RememberMe.save(email, document.getElementById('rememberMe').checked);
+
+    // 3. Generate + send OTP
+    loggedEmail = email;
+    loggedUser  = user;
+    try { sessionStorage.setItem('re_pending_user', JSON.stringify(user)); } catch(e) { console.error("Failed to save pending user to sessionStorage:", e); }
+    btn.textContent = '📨 Sending code...';
+
+    const otp  = OTP.generate();
+    OTP.store(email, otp);
+    const sent = await sendOTP(email, user.full_name || email, otp);
+
+    if (!sent) {
+      btn.textContent = '🔑 Sign In & Verify →';
+      btn.disabled    = false;
+      return;
+    }
+
+    // 4. Switch to OTP step
+    showStep('step2');
+    document.getElementById('emailMask').textContent = maskEmail(email);
+    startTimer();
+    initBoxes();
+    document.getElementById('b1').focus();
+
+    if (EJ.publicKey !== 'YOUR_PUBLIC_KEY')
+      showToast('Verification code sent! Check your email ✉️', 'success');
+
+  } catch (err) {
+    console.error('Login Error:', err);
+
+    // Record failed attempt
+    if (typeof AccountLock !== 'undefined') {
+      const result   = AccountLock.recordFail(email);
+      const remaining = AccountLock.getRemainingAttempts(email);
+      const attemptsEl = document.getElementById('attemptsLeft');
+      if (remaining > 0 && remaining <= 3) {
+        attemptsEl.textContent = `⚠️ ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining before lockout`;
+        attemptsEl.style.display = 'block';
+      } else {
+        attemptsEl.style.display = 'none';
+      }
+      if (result.lockedUntil) {
+        document.getElementById('lockBanner').classList.add('show');
+        document.getElementById('lockMsg').textContent = 'Try again in 15 minutes.';
+      }
+    }
+
+    showError(document.getElementById('loginEmail'), err.message || 'Invalid email or password');
+    btn.textContent = '🔑 Sign In & Verify →';
+    btn.disabled    = false;
+  }
+});
+
+// ================================================================
+// STEP 2: Verify OTP
+// ================================================================
+async function doVerify() {
+  const entered = getOTP();
+  if (entered.length < 6) { showToast('Please enter the complete 6-digit code', 'warning'); return; }
+
+  const btn = document.getElementById('verifyBtn');
+  btn.textContent = '⏳ Checking...';
+  btn.disabled    = true;
+
+  const res = OTP.verify(loggedEmail, entered);
+  if (!res.valid) {
+    shakeBoxes();
+    showToast(res.msg, 'error');
+    btn.textContent = '✅ Verify';
+    btn.disabled    = false;
+    return;
+  }
+
+  // Session is already established by Auth.login() via Supabase
+  btn.textContent = '✅ Verified!';
+  let user = loggedUser;
+  if (!user) {
+    try { user = JSON.parse(sessionStorage.getItem('re_pending_user')); } catch(e) { console.error("Failed to parse pending user from sessionStorage:", e); }
+  }
+  console.log("[doVerify] Verifying OTP. Selected user:", user);
+  if (user) {
+    Auth.set2FAVerified(user.id, true);
+    try { sessionStorage.removeItem('re_pending_user'); } catch(e) {}
+  } else {
+    console.error("[doVerify] Verification error: No user state found! Cannot mark 2FA verified!");
+  }
+  if (typeof SecurityLog !== 'undefined') SecurityLog.add('otp_verified', 'Login OTP verified successfully', loggedEmail);
+  showToast('Login successful! 🎉', 'success');
+  setTimeout(() => window.location.href = 'home.html', 1100);
+}
+
+// ================================================================
+// Timer
+// ================================================================
+function startTimer() {
+  let secs = 300;
+  clearInterval(timerLoop);
+  timerLoop = setInterval(() => {
+    secs--;
+    const m = Math.floor(secs / 60), s = secs % 60;
+    const el = document.getElementById('timerVal');
+    if (el) el.textContent = m + ':' + String(s).padStart(2, '0');
+    if (secs <= 0) {
+      clearInterval(timerLoop);
+      const p = el?.parentElement;
+      if (p) p.innerHTML = '⏰ Code expired. Please request a new one.';
+    }
+  }, 1000);
+
+  // Enable resend after 30s
+  let rs = 30;
+  clearInterval(resendLoop);
+  const rb = document.getElementById('resendBtn');
+  rb.disabled = true;
+  rb.textContent = `Resend code (${rs}s)`;
+  resendLoop = setInterval(() => {
+    rs--;
+    rb.textContent = rs > 0 ? `Resend code (${rs}s)` : 'Resend code';
+    if (rs <= 0) { clearInterval(resendLoop); rb.disabled = false; }
+  }, 1000);
+}
+
+async function doResend() {
+  const rb = document.getElementById('resendBtn');
+  rb.disabled = true;
+  rb.textContent = 'Sending...';
+
+  const otp = OTP.generate();
+  OTP.store(loggedEmail, otp);
+  [1,2,3,4,5,6].forEach(i => {
+    const b = document.getElementById('b' + i);
+    if (b) { b.value = ''; b.classList.remove('filled', 'error'); }
+  });
+  const b1 = document.getElementById('b1');
+  if (b1) b1.focus();
+
+  const sent = await sendOTP(loggedEmail, loggedUser?.full_name, otp);
+  if (sent) showToast(EJ.publicKey !== 'YOUR_PUBLIC_KEY' ? 'New code sent! ✉️' : `🛠 Dev Code: ${otp}`, 'info');
+  startTimer();
+}
+
+// ================================================================
+// Forgot Password
+// ================================================================
+function showForgot() { showStep('step3'); }
+
+async function sendResetOTP() {
+  const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+  if (!validateEmail(email)) {
+    showError(document.getElementById('forgotEmail'), 'Please enter a valid email address');
+    return;
+  }
+
+  const btn = document.getElementById('resetBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sending...'; }
+
+  try {
+    if (!sb) throw new Error('Database not connected. Please set up Supabase first.');
+
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/profile.html',
+    });
+
+    if (error) throw error;
+
+    showToast('Password reset link sent to your email! 📧', 'success');
+    showStep('step1');
+  } catch(err) {
+    console.error('Reset Error:', err);
+    showError(document.getElementById('forgotEmail'), err.message || 'Could not send reset link. Please try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📨 Send Reset Link'; }
+  }
+}
+
+// ================================================================
+// Navigation helpers
+// ================================================================
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goBack() {
+  clearInterval(timerLoop);
+  clearInterval(resendLoop);
+  [1,2,3,4,5,6].forEach(i => {
+    const b = document.getElementById('b' + i);
+    if (b) { b.value = ''; b.classList.remove('filled', 'error'); }
+  });
+  document.getElementById('lockBanner').classList.remove('show');
+  document.getElementById('attemptsLeft').style.display = 'none';
+  const loginBtn = document.getElementById('loginBtn');
+  if (loginBtn) { loginBtn.textContent = '🔑 Sign In & Verify →'; loginBtn.disabled = false; }
+  showStep('step1');
+}
+
+// Shake keyframe (injected so it's always available)
+const _shakeStyle = document.createElement('style');
+_shakeStyle.textContent = `
+@keyframes shake {
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(5px)}
+}`;
+document.head.appendChild(_shakeStyle);
+</script>
+</body>
+</html>

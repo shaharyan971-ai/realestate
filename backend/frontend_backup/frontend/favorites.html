@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Favorites - RealEstate</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-brand"> RealEstate</a>
+  <a href="index.html"><span class="nav-icon"></span> Dashboard<span class="nav-arrow"></span></a>
+  <a href="profile.html"><span class="nav-icon"></span> My Profile<span class="nav-arrow"></span></a>
+  <a href="properties.html"><span class="nav-icon"></span> My Properties<span class="nav-arrow"></span></a>
+  <a href="add-property.html"><span class="nav-icon"></span> Add Property<span class="nav-arrow"></span></a>
+  <a href="messages.html"><span class="nav-icon"></span> Messages<span class="nav-arrow"></span></a>
+  <a href="favorites.html"><span class="nav-icon"></span> Favorites<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="calculators.html"><span class="nav-icon"></span> Calculators<span class="nav-arrow"></span></a>
+  <a href="compare.html"><span class="nav-icon"></span> Compare<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="home.html"><span class="nav-icon"></span> Browse Properties<span class="nav-arrow"></span></a>
+  <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;"><span class="nav-icon"></span> Sign Out<span class="nav-arrow"></span></a>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+  <div class="page-header">
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <div>
+      <h1 id="welcomeMsg">Welcome </h1>
+      <p>Aapki pasand ki properties</p>
+    </div>
+  </div>
+
+  <h2 class="section-title"> My Favorites</h2>
+
+  <div class="cards-grid" id="favoritesGrid"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+async function init() {
+  const logged = await Auth.isLoggedIn();
+  if (!logged) {
+    window.location.href = 'login.html';
+    return;
+  }
+  await loadFavorites();
+}
+
+async function loadFavorites() {
+  const grid = document.getElementById('favoritesGrid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="spinner-overlay show"><div class="spinner"></div></div>';
+
+  const favs = await Store.getFavorites();
+
+  grid.innerHTML = '';
+  if (favs.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon"></span>
+        <h3>No favorites yet</h3>
+        <p>Go to property listings and click the heart icon to save them</p>
+        <a href="home.html" class="btn btn-gold">Browse Properties</a>
+      </div>`;
+    return;
+  }
+
+  favs.forEach((prop, i) => {
+    const card = renderPropertyCard(prop, { index: i, isFavorite: true });
+    grid.appendChild(card);
+  });
+}
+
+// Override handleFav from script.js to refresh grid on this page
+const originalHandleFav = handleFav;
+window.handleFav = async function(propId, btn) {
+  await originalHandleFav(propId, btn);
+  await loadFavorites();
+};
+
+loadFavorites();
+</script>
+</body>
+</html>

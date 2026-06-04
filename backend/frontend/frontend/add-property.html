@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Property - RealEstate</title>
+
+<!-- Tailwind CDN & Custom config for shadcn design variables -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="tailwind-config.js"></script>
+<link rel="stylesheet" href="style.css">
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-brand"> RealEstate</a>
+  <a href="index.html"><span class="nav-icon"></span> Dashboard<span class="nav-arrow"></span></a>
+  <a href="profile.html"><span class="nav-icon"></span> My Profile<span class="nav-arrow"></span></a>
+  <a href="properties.html"><span class="nav-icon"></span> My Properties<span class="nav-arrow"></span></a>
+  <a href="add-property.html"><span class="nav-icon"></span> Add Property<span class="nav-arrow"></span></a>
+  <a href="messages.html"><span class="nav-icon"></span> Messages<span class="nav-arrow"></span></a>
+  <a href="favorites.html"><span class="nav-icon"></span> Favorites<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="calculators.html"><span class="nav-icon"></span> Calculators<span class="nav-arrow"></span></a>
+  <a href="compare.html"><span class="nav-icon"></span> Compare<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="home.html"><span class="nav-icon"></span> Browse Properties<span class="nav-arrow"></span></a>
+  <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;"><span class="nav-icon"></span> Sign Out<span class="nav-arrow"></span></a>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+
+  <div class="page-header">
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <div>
+      <h1 id="pageTitle">Add New Property</h1>
+      <p>List your property in minutes</p>
+    </div>
+    <a href="properties.html" class="btn btn-outline btn-sm" style="margin-left:auto;"> Back</a>
+  </div>
+
+  <div style="max-width:800px;">
+
+    <!-- Image preview -->
+    <div style="background:var(--card); border:2px dashed var(--border); border-radius:var(--radius); padding:30px; text-align:center; margin-bottom:24px; cursor:pointer; transition:var(--transition);" id="imageDropArea" onclick="document.getElementById('propImageInput').click()" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div id="imagePreviewContainer">
+        <div style="font-size:48px; margin-bottom:12px;"></div>
+        <p style="color:var(--text-muted); font-size:14px;">Click to upload property photo</p>
+        <p style="color:var(--text-muted); font-size:12px; margin-top:4px;">JPG, PNG, WebP - Max 5MB</p>
+      </div>
+      <input type="file" id="propImageInput" accept="image/jpeg,image/png,image/webp" style="display:none;">
+    </div>
+
+    <!-- Deal score preview -->
+    <div id="dealScorePreview" style="display:none; padding:12px 18px; border-radius:10px; margin-bottom:20px; font-size:14px; font-weight:600; text-align:center; border:1px solid;"></div>
+
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:32px;">
+
+      <form id="addPropertyForm" novalidate>
+
+        <!-- Basic Info -->
+        <h3 style="font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--gold); margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border);"> Basic Information</h3>
+
+        <div class="form-group">
+          <label>Property Title *</label>
+          <input type="text" id="propTitle" placeholder="e.g. 3BHK Modern Flat in Mumbai">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Listing Type *</label>
+            <select id="propType">
+              <option value="">Select...</option>
+              <option value="Sale">For Sale</option>
+              <option value="Rent">For Rent</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Property Category *</label>
+            <select id="propCategory">
+              <option value="">Select...</option>
+              <option value="Apartment">Apartment / Flat</option>
+              <option value="Villa">Villa</option>
+              <option value="House">House</option>
+              <option value="Plot">Plot / Land</option>
+              <option value="Commercial">Commercial</option>
+              <option value="PG">PG / Hostel</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Location -->
+        <h3 style="font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--gold); margin:24px 0 20px; padding-bottom:12px; border-bottom:1px solid var(--border);"> Location</h3>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>City *</label>
+            <input type="text" id="propCity" placeholder="e.g. Mumbai, Delhi, Pune">
+          </div>
+          <div class="form-group">
+            <label>Area / Locality *</label>
+            <input type="text" id="propArea" placeholder="e.g. Bandra, Koramangala">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Full Address</label>
+          <input type="text" id="propAddress" placeholder="Street, building, pincode">
+        </div>
+
+        <!-- Price & Size -->
+        <h3 style="font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--gold); margin:24px 0 20px; padding-bottom:12px; border-bottom:1px solid var(--border);"> Price & Size</h3>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label id="priceLabel">Price (Rs. ) *</label>
+            <input type="number" id="propPrice" placeholder="e.g. 5000000" min="1" oninput="updateDealScore()">
+          </div>
+          <div class="form-group">
+            <label>Area (sq.ft) *</label>
+            <input type="number" id="propSqft" placeholder="e.g. 1200" min="1" oninput="updateDealScore()">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bedrooms (BHK) *</label>
+            <select id="propBedrooms">
+              <option value="">Select...</option>
+              <option value="1">1 BHK</option>
+              <option value="2">2 BHK</option>
+              <option value="3">3 BHK</option>
+              <option value="4">4 BHK</option>
+              <option value="5">5+ BHK</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Bathrooms</label>
+            <select id="propBathrooms">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4+</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Amenities -->
+        <h3 style="font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--gold); margin:24px 0 16px; padding-bottom:12px; border-bottom:1px solid var(--border);"> Amenities</h3>
+
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;" id="amenitiesGroup">
+          <label class="amenity-chip" data-val="Parking"> Parking</label>
+          <label class="amenity-chip" data-val="Gym"> Gym</label>
+          <label class="amenity-chip" data-val="Swimming Pool"> Pool</label>
+          <label class="amenity-chip" data-val="Lift"> Lift</label>
+          <label class="amenity-chip" data-val="Security"> Security</label>
+          <label class="amenity-chip" data-val="Power Backup"> Power Backup</label>
+          <label class="amenity-chip" data-val="Garden"> Garden</label>
+          <label class="amenity-chip" data-val="Furnished"> Furnished</label>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="propDescription" rows="4" placeholder="Describe the property in detail - location highlights, nearby amenities, condition, etc."></textarea>
+        </div>
+
+        <!-- Contact -->
+        <h3 style="font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--gold); margin:24px 0 20px; padding-bottom:12px; border-bottom:1px solid var(--border);"> Contact</h3>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Contact Name</label>
+            <input type="text" id="propContactName" placeholder="Aapka naam">
+          </div>
+          <div class="form-group">
+            <label>Contact Phone</label>
+            <input type="tel" id="propContactPhone" placeholder="10-digit mobile" maxlength="10">
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;">
+          <button type="submit" class="btn btn-gold" id="submitBtn">
+             List Property
+          </button>
+          <button type="button" class="btn btn-outline" onclick="history.back()">Cancel</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.amenity-chip {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+.amenity-chip:hover { border-color: var(--border-hover); color: var(--text); }
+.amenity-chip.selected {
+  background: rgba(255,215,0,0.12);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+// Auth check is handled in init() below
+
+// Amenity chip toggle
+document.getElementById('amenitiesGroup').addEventListener('click', (e) => {
+  const chip = e.target.closest('.amenity-chip');
+  if (chip) chip.classList.toggle('selected');
+});
+
+// Update price label based on type
+document.getElementById('propType').addEventListener('change', function() {
+  document.getElementById('priceLabel').textContent =
+    this.value === 'Rent' ? 'Monthly Rent (Rs. ) *' : 'Price (Rs. ) *';
+  updateDealScore();
+});
+
+// Deal score calculator
+function updateDealScore() {
+  const price = parseFloat(document.getElementById('propPrice').value);
+  const sqft = parseFloat(document.getElementById('propSqft').value);
+  const city = document.getElementById('propCity').value.trim();
+  const type = document.getElementById('propType').value;
+
+  if (!price || !sqft || type === 'Rent') {
+    document.getElementById('dealScorePreview').style.display = 'none';
+    return;
+  }
+
+  const pricePerSqft = price / sqft;
+  const cityRates = {
+    'mumbai': 15000, 'pune': 6000, 'bangalore': 7000, 'bengaluru': 7000,
+    'delhi': 8000, 'gurgaon': 9000, 'hyderabad': 5500, 'chennai': 6000,
+    'kolkata': 4500, 'ahmedabad': 4000
+  };
+
+  const marketRate = cityRates[city.toLowerCase()] || 6000;
+  const ratio = pricePerSqft / marketRate;
+
+  const el = document.getElementById('dealScorePreview');
+  el.style.display = 'block';
+
+  if (ratio < 0.85) {
+    el.style.cssText = 'display:block; padding:12px 18px; border-radius:10px; margin-bottom:20px; font-size:14px; font-weight:600; text-align:center; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); color:#22c55e;';
+    el.textContent = ' Great Deal - Market rate se ' + Math.round((1-ratio)*100) + '% sasta!';
+  } else if (ratio < 1.05) {
+    el.style.cssText = 'display:block; padding:12px 18px; border-radius:10px; margin-bottom:20px; font-size:14px; font-weight:600; text-align:center; background:rgba(255,215,0,0.1); border:1px solid rgba(255,215,0,0.3); color:#FFD700;';
+    el.textContent = ' Fair Price - Market rate pe hai';
+  } else {
+    el.style.cssText = 'display:block; padding:12px 18px; border-radius:10px; margin-bottom:20px; font-size:14px; font-weight:600; text-align:center; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444;';
+    el.textContent = ' Overpriced - Market rate se ' + Math.round((ratio-1)*100) + '% zyada';
+  }
+}
+
+// Image upload
+document.getElementById('propImageInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('Image must be smaller than 5MB', 'error');
+    return;
+  }
+
+  showSpinner();
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxW = 800;
+      let { width, height } = img;
+      if (width > maxW) { height = height * maxW / width; width = maxW; }
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+
+      const compressed = canvas.toDataURL('image/jpeg', 0.8);
+      document.getElementById('imagePreviewContainer').innerHTML = `
+        <img src="${compressed}" style="max-height:200px; border-radius:8px; object-fit:cover; width:100%;">
+        <p style="color:var(--text-muted); font-size:12px; margin-top:8px;"> Photo upload ho gayi - Click to change</p>
+      `;
+      document.getElementById('propImageInput').dataset.base64 = compressed;
+      hideSpinner();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Check for edit mode & Init
+const editId = new URLSearchParams(window.location.search).get('edit');
+
+async function init() {
+  const logged = await Auth.isLoggedIn();
+  if (!logged) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  if (editId) {
+    const prop = await Store.getPropertyById(editId);
+    const user = await Auth.getUser();
+    
+    if (prop && prop.owner_id === user.id) {
+      document.getElementById('pageTitle').textContent = 'Edit Property';
+      document.getElementById('submitBtn').textContent = ' Update Property';
+
+      // Pre-fill form
+      document.getElementById('propTitle').value = prop.title || '';
+      document.getElementById('propType').value = prop.listing_type || '';
+      document.getElementById('propCategory').value = prop.category || '';
+      document.getElementById('propCity').value = prop.city || '';
+      document.getElementById('propArea').value = prop.locality || '';
+      document.getElementById('propAddress').value = prop.address || '';
+      document.getElementById('propPrice').value = prop.price || '';
+      document.getElementById('propSqft').value = prop.area || '';
+      document.getElementById('propBedrooms').value = prop.bedrooms || '';
+      document.getElementById('propBathrooms').value = prop.bathrooms || '';
+      document.getElementById('propDescription').value = prop.description || '';
+      document.getElementById('propContactName').value = prop.contact_name || '';
+      document.getElementById('propContactPhone').value = prop.contact_phone || '';
+
+      if (prop.image) {
+        document.getElementById('imagePreviewContainer').innerHTML = `
+          <img src="${prop.image}" style="max-height:200px; border-radius:8px; object-fit:cover; width:100%;">
+          <p style="color:var(--text-muted); font-size:12px; margin-top:8px;">Click to change photo</p>
+        `;
+        document.getElementById('propImageInput').dataset.base64 = prop.image;
+      }
+
+      if (prop.amenities) {
+        document.querySelectorAll('.amenity-chip').forEach(chip => {
+          if (prop.amenities.includes(chip.dataset.val)) chip.classList.add('selected');
+        });
+      }
+      updateDealScore();
+    }
+  }
+}
+
+// Form submit
+document.getElementById('addPropertyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const title = sanitize(document.getElementById('propTitle').value.trim());
+  const type = document.getElementById('propType').value;
+  const category = document.getElementById('propCategory').value;
+  const city = sanitize(document.getElementById('propCity').value.trim());
+  const locality = sanitize(document.getElementById('propArea').value.trim());
+  const price = parseFloat(document.getElementById('propPrice').value);
+  const sqft = parseFloat(document.getElementById('propSqft').value);
+  const bedrooms = document.getElementById('propBedrooms').value;
+
+  let valid = true;
+  const checks = [
+    [document.getElementById('propTitle'), !title, 'Title is required'],
+    [document.getElementById('propType'), !type, 'Please select a listing type'],
+    [document.getElementById('propCategory'), !category, 'Please select a category'],
+    [document.getElementById('propCity'), !city, 'City is required'],
+    [document.getElementById('propArea'), !locality, 'Area / locality is required'],
+    [document.getElementById('propPrice'), !price || price < 1, 'Please enter a valid price'],
+    [document.getElementById('propSqft'), !sqft || sqft < 1, 'Please enter a valid area in sq ft'],
+    [document.getElementById('propBedrooms'), !bedrooms, 'Please select number of bedrooms'],
+  ];
+
+  checks.forEach(([el, condition, msg]) => {
+    if (condition) { showError(el, msg); valid = false; }
+    else clearError(el);
+  });
+
+  if (!valid) { showToast('Please fill in all required fields', 'error'); return; }
+
+  const amenities = [...document.querySelectorAll('.amenity-chip.selected')].map(c => c.dataset.val);
+  const imageData = document.getElementById('propImageInput').dataset.base64 || '';
+
+  // Deal score
+  const pricePerSqft = price / sqft;
+  const cityRates = { 'mumbai': 15000, 'pune': 6000, 'bangalore': 7000, 'delhi': 8000, 'gurgaon': 9000, 'hyderabad': 5500 };
+  const marketRate = cityRates[city.toLowerCase()] || 6000;
+  const ratio = pricePerSqft / marketRate;
+  const deal_score = ratio < 0.85 ? 'Great Deal' : ratio < 1.05 ? 'Fair Price' : 'Overpriced';
+
+  const propData = {
+    title,
+    listing_type: type,
+    category,
+    city,
+    locality,
+    location: `${locality}, ${city}`,
+    address: sanitize(document.getElementById('propAddress').value.trim()),
+    price,
+    area: sqft,
+    bedrooms: parseInt(bedrooms),
+    bathrooms: parseInt(document.getElementById('propBathrooms').value) || 1,
+    description: sanitize(document.getElementById('propDescription').value.trim()),
+    contact_name: sanitize(document.getElementById('propContactName').value.trim()),
+    contact_phone: document.getElementById('propContactPhone').value.trim(),
+    amenities,
+    deal_score,
+    image: imageData || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600'
+  };
+
+  const btn = document.getElementById('submitBtn');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  let success = false;
+  if (editId) {
+    success = await Store.updateProperty(editId, propData);
+    if (success) showToast('Property update ho gayi! ', 'success');
+  } else {
+    success = await Store.addProperty(propData);
+    if (success) showToast('Property list ho gayi! ', 'success');
+  }
+
+  if (success) {
+    setTimeout(() => { window.location.href = 'properties.html'; }, 1200);
+  } else {
+    btn.textContent = editId ? ' Update Property' : ' List Property';
+    btn.disabled = false;
+  }
+});
+
+init();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account - RealEstate</title>
+<script>
+// NUCLEAR: Kill all service workers and clear all caches immediately
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(r) { r.unregister(); });
+  });
+}
+if ('caches' in window) {
+  caches.keys().then(function(names) {
+    names.forEach(function(n) { caches.delete(n); });
+  });
+}
+</script>
+<link rel="stylesheet" href="style.css">
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+.role-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 9px;
+  margin-bottom: 4px;
+}
+.role-card {
+  padding: 12px 10px;
+  border: 1.5px solid rgba(230,185,74,0.12);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  user-select: none;
+  background: rgba(255,255,255,0.02);
+}
+.role-card:hover { border-color: rgba(230,185,74,0.3); background: rgba(230,185,74,0.05); }
+.role-card.selected { border-color: #e6b94a; background: rgba(230,185,74,0.1); }
+.role-card .role-icon { font-size: 22px; margin-bottom: 5px; display: block; }
+.role-card .role-name { font-size: 0.825rem; font-weight: 700; color: #e8e8e8; }
+.role-card .role-desc { font-size: 0.7rem; color: #5a5a5a; margin-top: 1px; }
+.role-card.selected .role-name { color: #e6b94a; }
+
+/* OTP Step */
+.step { display: none; }
+.step.active { display: block; animation: fadeUp 0.35s ease; }
+
+.otp-boxes {
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+  margin: 14px 0;
+}
+.otp-box {
+  width: 46px; height: 54px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #e6b94a;
+  background: #1a1c1e;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 9px;
+  outline: none;
+  transition: all 0.18s ease;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  caret-color: #e6b94a;
+}
+.otp-box:focus {
+  border-color: #e6b94a;
+  box-shadow: 0 0 0 3px rgba(230,185,74,0.1);
+  background: rgba(230,185,74,0.04);
+}
+.otp-box.filled { border-color: rgba(230,185,74,0.4); }
+
+.otp-timer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #5a5a5a;
+  margin-top: 8px;
+}
+.otp-timer b { color: #e6b94a; font-variant-numeric: tabular-nums; }
+
+/* Strength bar */
+.strength-bar-wrap {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0 6px;
+}
+.strength-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+  width: 0%;
+}
+.hint-row { display: flex; gap: 5px; flex-wrap: wrap; }
+.phint {
+  font-size: 0.72rem;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  color: #4a4a4a;
+  transition: all 0.2s ease;
+}
+.phint.ok { background: rgba(61,153,112,0.12); color: #3d9970; border: 1px solid rgba(61,153,112,0.25); }
+
+/* EmailJS setup notice */
+.setup-notice {
+  background: rgba(230,185,74,0.07);
+  border: 1px solid rgba(230,185,74,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: #a0a0a0;
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.setup-notice a { color: #e6b94a; text-decoration: none; font-weight: 600; }
+.setup-notice a:hover { text-decoration: underline; }
+</style>
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card" style="max-width:420px;">
+
+    <a href="home.html" class="auth-logo"> RealEstate</a>
+
+    <!-- STEP 1: FILL DETAILS -->
+    <div class="step active" id="step1">
+      <h2>Create Account</h2>
+      <p class="auth-sub">Verify your email to get started</p>
+
+      <form id="signupForm" novalidate>
+
+        <div class="form-group">
+          <label>Your Role</label>
+          <div class="role-selector" id="roleSelector">
+            <div class="role-card selected" data-role="buyer">
+              <span class="role-icon"></span>
+              <div class="role-name">Buyer</div>
+              <div class="role-desc">Looking to buy a property</div>
+            </div>
+            <div class="role-card" data-role="seller">
+              <span class="role-icon"></span>
+              <div class="role-name">Seller</div>
+              <div class="role-desc">Looking to sell property</div>
+            </div>
+            <div class="role-card" data-role="agent">
+              <span class="role-icon"></span>
+              <div class="role-name">Agent</div>
+              <div class="role-desc">Licensed real estate broker</div>
+            </div>
+
+          </div>
+          <input type="hidden" id="selectedRole" value="buyer">
+        </div>
+
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="signupName" placeholder="Your full name" autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="signupEmail" placeholder="you@email.com" autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <div style="position:relative;">
+            <input type="password" id="signupPass" placeholder="Create a strong password" style="padding-right:42px;">
+            <button type="button" id="signupPassEye" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;color:#5a5a5a;cursor:pointer;font-size:18px;padding:0;line-height:1;transition:color 0.2s;" title="Show/hide password" onclick="toggleSignupPass()">👁</button>
+          </div>
+          <div class="strength-bar-wrap"><div class="strength-bar-fill" id="sBar"></div></div>
+          <div class="hint-row">
+            <span class="phint" id="hL">6+ chars</span>
+            <span class="phint" id="hU">Uppercase</span>
+            <span class="phint" id="hN">Number</span>
+            <span class="phint" id="hS">Special (!@#)</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <div style="position:relative;">
+            <input type="password" id="signupConfirm" placeholder="Confirm your password" style="padding-right:42px;">
+            <button type="button" id="confirmPassEye" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;color:#5a5a5a;cursor:pointer;font-size:18px;padding:0;line-height:1;transition:color 0.2s;" title="Show/hide password" onclick="toggleConfirmPass()">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-gold btn-full" id="signupBtn">
+           Send Verification Code ->
+        </button>
+      </form>
+
+      <div class="auth-link-row">Already have an account? <a href="login.html">Sign In</a></div>
+      <div class="auth-link-row" style="margin-top:8px;">
+        <a href="home.html" style="color:var(--text-3);text-decoration:none;font-size:0.8rem;"> Back to Home</a>
+      </div>
+    </div>
+
+    <!-- STEP 2: OTP VERIFICATION -->
+    <div class="step" id="step2">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:44px;margin-bottom:10px;"></div>
+        <h2>Verify Your Email</h2>
+        <p class="auth-sub" style="margin-bottom:4px;">
+          A 6-digit verification code was sent to<br>
+          <strong id="sentToEmail" style="color:#e6b94a;font-size:0.875rem;"></strong>
+        </p>
+        <p style="font-size:0.75rem;color:#5a5a5a;">Check your spam/junk folder if not received</p>
+      </div>
+
+      <div class="otp-boxes" id="otpBoxes">
+        <input class="otp-box" id="o1" maxlength="1" inputmode="numeric" type="text">
+        <input class="otp-box" id="o2" maxlength="1" inputmode="numeric" type="text">
+        <input class="otp-box" id="o3" maxlength="1" inputmode="numeric" type="text">
+        <input class="otp-box" id="o4" maxlength="1" inputmode="numeric" type="text">
+        <input class="otp-box" id="o5" maxlength="1" inputmode="numeric" type="text">
+        <input class="otp-box" id="o6" maxlength="1" inputmode="numeric" type="text">
+      </div>
+
+      <div class="otp-timer">Expires in: <b id="countdown">5:00</b></div>
+
+      <button class="btn btn-gold btn-full" id="verifyBtn" onclick="verifyOTPAndRegister()" style="margin-top:14px;">
+         Verify & Create Account
+      </button>
+
+      <div style="text-align:center;margin-top:12px;font-size:0.825rem;color:#5a5a5a;">
+        Didn't receive the code?
+        <button id="resendBtn" onclick="resendOTP()" disabled
+          style="background:none;border:none;color:#e6b94a;font-size:0.825rem;cursor:pointer;font-family:inherit;font-weight:600;text-decoration:underline;">
+          Resend code (30s)
+        </button>
+      </div>
+
+      <div style="text-align:center;margin-top:10px;">
+        <button onclick="goBack()" style="background:none;border:none;color:#5a5a5a;font-size:0.8rem;cursor:pointer;font-family:inherit;"> Go back</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     EMAILJS SETUP INSTRUCTIONS
+     
+     1. emailjs.com pe free account banao
+     2. Add Email Service (Gmail or any SMTP)
+     3. Template banao with these variables:
+        - {{to_email}}   -> recipient email
+        - {{to_name}}    -> user name  
+        - {{otp_code}}   -> 6-digit OTP
+        - {{app_name}}   -> RealEstate
+     4. Replace PUBLIC_KEY, SERVICE_ID, TEMPLATE_ID below
+     ============================================================ -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+// 
+//   EMAILJS CONFIG
+//   EJ is already defined in config.js with real keys.
+//   Fallback only if config.js was not loaded.
+// 
+if (typeof EJ === 'undefined') {
+  window.EJ = {
+    publicKey:  'YOUR_PUBLIC_KEY',
+    serviceId:  'YOUR_SERVICE_ID',
+    templateId: 'YOUR_TEMPLATE_ID',
+  };
+}
+
+// EmailJS init
+(function() {
+  try { emailjs.init({ publicKey: EJ.publicKey }); }
+  catch(e) { console.warn('EmailJS not configured'); }
+})();
+
+//  State 
+let pendingData = null;
+let otpInterval = null;
+let resendTimer = null;
+
+//  Role select 
+document.getElementById('roleSelector').addEventListener('click', e => {
+  const c = e.target.closest('.role-card');
+  if (!c) return;
+  document.querySelectorAll('.role-card').forEach(x => x.classList.remove('selected'));
+  c.classList.add('selected');
+  document.getElementById('selectedRole').value = c.dataset.role;
+});
+
+//  Password strength (advanced) 
+document.getElementById('signupPass').addEventListener('input', function() {
+  const v = this.value;
+
+  // Basic checks for hint chips
+  const checks = [v.length >= 6, /[A-Z]/.test(v), /[0-9]/.test(v), /[!@#$%^&*]/.test(v)];
+  ['hL','hU','hN','hS'].forEach((id,i) => document.getElementById(id).classList.toggle('ok', checks[i]));
+
+  // Advanced scorer
+  const result = PasswordStrength.check(v);
+  const bar    = document.getElementById('sBar');
+  bar.style.width      = result.pct + '%';
+  bar.style.background = result.color;
+  bar.style.transition = 'all 0.3s ease';
+
+  // Strength label
+  let lbl = document.getElementById('strengthLabel');
+  if (!lbl) {
+    lbl = document.createElement('span');
+    lbl.id = 'strengthLabel';
+    lbl.style.cssText = 'font-size:0.72rem;font-weight:700;float:right;margin-top:-18px;display:block;';
+    bar.parentElement.parentElement.appendChild(lbl);
+  }
+  lbl.textContent = v ? result.label : '';
+  lbl.style.color = result.color;
+
+  clearError(this);
+});
+
+//  Send OTP via EmailJS 
+async function sendOTPEmail(email, name, otp) {
+  if (EJ.publicKey === 'YOUR_PUBLIC_KEY') {
+    showToast("Dev Mode - Code: " + otp, 'info');
+    setTimeout(() => alert(` Dev Code: ${otp}
+
+Configure EmailJS for real emails!
+Visit emailjs.com to set up a free account.`), 300);
+    return { success: true, dev: true };
+  }
+  try {
+    if (typeof emailjs === 'undefined') {
+      throw new Error("EmailJS library not loaded");
+    }
+    await emailjs.send(EJ.serviceId, EJ.templateId, {
+      to_email: email,
+      to_name:  name || email.split('@')[0],
+      otp_code: otp,
+      app_name: ' RealEstate',
+    });
+    return { success: true };
+  } catch(err) {
+    console.warn('EmailJS error (proceeding in fallback dev mode):', err);
+    showToast("🛠 Dev Mode Fallback: OTP is " + otp, 'info');
+    console.info("[DEV FALLBACK] OTP for " + email + ":", otp);
+    return { success: true, dev: true }; // Proceed anyway using the fallback
+  }
+}
+
+//  Form submit -> send OTP 
+document.getElementById('signupForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  const name    = sanitize(document.getElementById('signupName').value.trim());
+  const email   = document.getElementById('signupEmail').value.trim().toLowerCase();
+  const pass    = document.getElementById('signupPass').value;
+  const confirm = document.getElementById('signupConfirm').value;
+  const role    = document.getElementById('selectedRole').value;
+
+  // Validation
+  let ok = true;
+  if (name.length < 2)     { showError(document.getElementById('signupName'),    'Name must be at least 2 characters'); ok = false; }
+  else clearError(document.getElementById('signupName'));
+
+  if (!validateEmail(email)){ showError(document.getElementById('signupEmail'),   'Please enter a valid email address'); ok = false; }
+  else clearError(document.getElementById('signupEmail'));
+
+  const pe = validatePassword(pass);
+  if (pe)                    { showError(document.getElementById('signupPass'),    pe); ok = false; }
+  else clearError(document.getElementById('signupPass'));
+
+  if (pass !== confirm)      { showError(document.getElementById('signupConfirm'),'Passwords do not match'); ok = false; }
+  else clearError(document.getElementById('signupConfirm'));
+
+  if (!ok) return;
+
+  // Show loading
+  const btn = document.getElementById('signupBtn');
+  btn.textContent = ' Creating account...';
+  btn.disabled = true;
+
+  try {
+    // 1. Supabase Signup (Checks for existing etc.)
+    const user = await Auth.signup(email, pass, { fullName: name, role: role });
+    
+    // 2. Generate OTP for simulated "Premium" verification step
+    const otp = OTP.generate();
+    OTP.store(email, otp);
+
+    // Send real email
+    const result = await sendOTPEmail(email, name, otp);
+
+    if (!result.success) {
+      btn.textContent = ' Send Verification Code ->';
+      btn.disabled = false;
+      showToast('Email failed: ' + result.error, 'error');
+      return;
+    }
+
+    // Save pending data (though user is already in SB, we keep state for next step)
+    pendingData = { name, email, pass, role, userId: user ? user.id : null };
+    try { sessionStorage.setItem('re_pending_signup', JSON.stringify(pendingData)); } catch(e) {}
+
+    // Switch to OTP step
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step2').classList.add('active');
+    document.getElementById('sentToEmail').textContent = email;
+
+    if (!result.dev) showToast('Verification code sent!  Check your email', 'success');
+
+    startCountdown();
+    setupOTPBoxes();
+    document.getElementById('o1').focus();
+
+  } catch (err) {
+    console.error('Signup Error:', err);
+    showError(document.getElementById('signupEmail'), err.message || 'Signup failed');
+    btn.textContent = ' Send Verification Code ->';
+    btn.disabled = false;
+  }
+});
+
+//  OTP Boxes 
+function setupOTPBoxes() {
+  const boxes = [1,2,3,4,5,6].map(i => document.getElementById('o' + i));
+  boxes.forEach((box, idx) => {
+    box.addEventListener('input', e => {
+      const val = e.target.value.replace(/\D/g, '');
+      box.value = val.slice(-1);
+      box.classList.toggle('filled', !!box.value);
+      if (val && idx < 5) boxes[idx+1].focus();
+      if (getOTP().length === 6) verifyOTPAndRegister();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && idx > 0) boxes[idx-1].focus();
+    });
+    box.addEventListener('paste', e => {
+      const p = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);
+      if (p.length === 6) {
+        p.split('').forEach((c,i) => { boxes[i].value = c; boxes[i].classList.add('filled'); });
+        boxes[5].focus();
+        setTimeout(verifyOTPAndRegister, 80);
+        e.preventDefault();
+      }
+    });
+  });
+}
+
+function getOTP() {
+  return [1,2,3,4,5,6].map(i => document.getElementById('o'+i).value).join('');
+}
+
+function shakeBoxes() {
+  const boxes = document.getElementById('otpBoxes');
+  boxes.style.animation = 'none';
+  boxes.offsetHeight; // reflow
+  boxes.style.animation = 'shake 0.4s ease';
+  [1,2,3,4,5,6].forEach(i => {
+    const b = document.getElementById('o'+i);
+    b.style.borderColor = '#c0392b';
+    b.value = '';
+    b.classList.remove('filled');
+    setTimeout(() => b.style.borderColor = '', 1200);
+  });
+  document.getElementById('o1').focus();
+}
+
+//  Verify OTP & Complete Registration 
+async function verifyOTPAndRegister() {
+  const entered = getOTP();
+  if (entered.length < 6) { showToast('Please enter the complete 6-digit code', 'warning'); return; }
+
+  const btn = document.getElementById('verifyBtn');
+  btn.textContent = 'Verifying...';
+  btn.disabled = true;
+
+  let pData = pendingData;
+  if (!pData) {
+    try { pData = JSON.parse(sessionStorage.getItem('re_pending_signup')); } catch(e) {}
+  }
+  if (!pData) {
+    console.error("[verifyOTPAndRegister] Error: No pending signup data found!");
+    showToast("Signup state lost. Please register again.", "error");
+    btn.textContent = ' Verify & Create Account';
+    btn.disabled = false;
+    return;
+  }
+
+  const result = OTP.verify(pData.email, entered);
+
+  if (!result.valid) {
+    shakeBoxes();
+    showToast(result.msg, 'error');
+    btn.textContent = ' Verify & Create Account';
+    btn.disabled = false;
+    return;
+  }
+
+  // OTP correct - user already created in Supabase in step 1
+  clearInterval(otpInterval);
+  clearInterval(resendTimer);
+
+  btn.textContent = ' Verified!';
+  console.log("[verifyOTPAndRegister] Verification success. Setting 2FA verified for:", pData.userId);
+  if (pData.userId) {
+    Auth.set2FAVerified(pData.userId, true);
+    try { sessionStorage.removeItem('re_pending_signup'); } catch(e) {}
+  }
+  showToast(`Welcome ${pData.name}! Email verified successfully`, 'success');
+  setTimeout(() => window.location.href = 'home.html', 1200);
+}
+
+//  Countdown timer 
+function startCountdown() {
+  let secs = 300;
+  clearInterval(otpInterval);
+  otpInterval = setInterval(() => {
+    secs--;
+    const m = Math.floor(secs / 60), s = secs % 60;
+    const el = document.getElementById('countdown');
+    if (el) el.textContent = m + ':' + String(s).padStart(2, '0');
+    if (secs <= 0) {
+      clearInterval(otpInterval);
+      if (el) el.parentElement.innerHTML = ' Code expired. Please request a new one.';
+    }
+  }, 1000);
+
+  // Enable resend after 30s
+  let rs = 30;
+  clearInterval(resendTimer);
+  const rb = document.getElementById('resendBtn');
+  rb.disabled = true;
+  rb.textContent = `Resend code (${rs}s)`;
+  resendTimer = setInterval(() => {
+    rs--;
+    rb.textContent = rs > 0 ? `Resend code (${rs}s)` : 'Resend code';
+    if (rs <= 0) { clearInterval(resendTimer); rb.disabled = false; }
+  }, 1000);
+}
+
+async function resendOTP() {
+  const otp = OTP.generate();
+  OTP.store(pendingData.email, otp);
+  [1,2,3,4,5,6].forEach(i => { document.getElementById('o'+i).value=''; document.getElementById('o'+i).classList.remove('filled'); });
+  document.getElementById('o1').focus();
+
+  const result = await sendOTPEmail(pendingData.email, pendingData.name, otp);
+  if (result.success) showToast(EJ.publicKey !== 'YOUR_PUBLIC_KEY' ? 'New code sent! ' : `Dev Code: ${otp}`, 'info');
+  else showToast('Email failed: ' + result.error, 'error');
+
+  startCountdown();
+}
+
+function goBack() {
+  clearInterval(otpInterval); clearInterval(resendTimer);
+  [1,2,3,4,5,6].forEach(i => { document.getElementById('o'+i).value=''; });
+  document.getElementById('step2').classList.remove('active');
+  document.getElementById('step1').classList.add('active');
+  document.getElementById('signupBtn').textContent = ' Send Verification Code ->';
+  document.getElementById('signupBtn').disabled = false;
+}
+
+// Clipboard protection on confirm password (can't paste - forces manual typing)
+ClipboardGuard.protect('signupConfirm');
+
+// Eye toggle helpers
+function toggleSignupPass() {
+  const inp = document.getElementById('signupPass');
+  const btn = document.getElementById('signupPassEye');
+  if (!inp || !btn) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+function toggleConfirmPass() {
+  const inp = document.getElementById('signupConfirm');
+  const btn = document.getElementById('confirmPassEye');
+  if (!inp || !btn) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+// Log OTP failure
+const origVerify = verifyOTPAndRegister;
+
+// Shake keyframe
+const style = document.createElement('style');
+style.textContent = `
+@keyframes shake {
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(5px)}
+}`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RealEstate - Find Your Perfect Property</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.search-hero-wrap{width:100%;max-width:840px;margin:0 auto 16px;position:relative;z-index:10;animation:fadeUp 0.5s ease 0.25s both}
+.search-main-bar{display:flex;align-items:center;background:rgba(18,18,18,0.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,215,0,0.2);border-radius:16px;padding:6px 6px 6px 0;box-shadow:0 8px 40px rgba(0,0,0,0.5);transition:border-color 0.3s,box-shadow 0.3s;gap:0;flex-wrap:nowrap}
+.search-main-bar:focus-within{border-color:rgba(255,215,0,0.55);box-shadow:0 8px 40px rgba(255,215,0,0.12)}
+.search-main-bar input{flex:1;min-width:0;padding:13px 18px;background:transparent;border:none;color:#f0f0f0;font-family:'Outfit',sans-serif;font-size:15px;outline:none}
+.search-main-bar input::placeholder{color:rgba(255,255,255,0.28)}
+.s-divider{width:1px;height:26px;background:rgba(255,215,0,0.15);flex-shrink:0}
+.search-type-sel{padding:13px 14px;background:transparent;border:none;color:#999;font-family:'Outfit',sans-serif;font-size:13px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;min-width:108px;flex-shrink:0}
+.search-type-sel option{background:#161616}
+.filter-btn{display:flex;align-items:center;gap:6px;padding:9px 14px;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.18);border-radius:10px;color:#FFD700;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.22s;flex-shrink:0;margin:0 4px;position:relative;white-space:nowrap}
+.filter-btn:hover{background:rgba(255,215,0,0.13);border-color:rgba(255,215,0,0.4)}
+.filter-btn.active-filters{background:rgba(255,215,0,0.16);border-color:rgba(255,215,0,0.5)}
+.f-badge{display:none;position:absolute;top:-8px;right:-8px;width:18px;height:18px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;font-size:10px;font-weight:800;border-radius:50%;align-items:center;justify-content:center}
+.f-badge.show{display:flex}
+.go-btn{padding:11px 20px;background:linear-gradient(135deg,#FFD700,#FFA500);border:none;border-radius:11px;color:#000;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.22s;white-space:nowrap;flex-shrink:0}
+.go-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,215,0,0.4)}
+.filter-panel{background:rgba(14,14,14,0.98);border:1px solid rgba(255,215,0,0.18);border-radius:16px;overflow:hidden;max-height:0;opacity:0;transition:max-height 0.5s cubic-bezier(0.4,0,0.2,1),opacity 0.35s;box-shadow:0 20px 60px rgba(0,0,0,0.7);margin-top:8px}
+.filter-panel.open{max-height:800px;opacity:1}
+.filter-panel-inner{padding:24px 26px}
+.fp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;margin-bottom:22px}
+.fp-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,215,0,0.6);margin-bottom:12px}
+.price-disp{display:flex;justify-content:space-between;margin-bottom:10px;gap:8px}
+.price-disp span{font-size:12px;font-weight:700;color:#FFD700;background:rgba(255,215,0,0.07);padding:4px 10px;border-radius:6px;border:1px solid rgba(255,215,0,0.15)}
+.range-wrap{position:relative;height:20px;margin:10px 0 4px}
+.range-track-bg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:4px;background:rgba(255,255,255,0.07);border-radius:4px}
+.range-fill{position:absolute;top:50%;transform:translateY(-50%);height:4px;background:linear-gradient(90deg,#FFD700,#FFA500);border-radius:4px;pointer-events:none}
+.r-slider{position:absolute;top:0;left:0;width:100%;height:100%;background:transparent;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer}
+.r-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FFA500);border:2px solid #0a0a0a;box-shadow:0 2px 8px rgba(255,215,0,0.5);cursor:pointer;transition:transform 0.15s}
+.r-slider::-webkit-slider-thumb:hover{transform:scale(1.25)}
+.r-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FFA500);border:2px solid #0a0a0a;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:6px 13px;border-radius:999px;border:1px solid rgba(255,215,0,0.12);background:rgba(255,255,255,0.02);color:#777;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.18s;user-select:none;white-space:nowrap}
+.chip:hover{border-color:rgba(255,215,0,0.3);color:#ccc}
+.chip.on{background:rgba(255,215,0,0.11);border-color:rgba(255,215,0,0.45);color:#FFD700;font-weight:700}
+.fp-footer{display:flex;align-items:center;justify-content:space-between;padding-top:18px;border-top:1px solid rgba(255,215,0,0.08);gap:12px;flex-wrap:wrap}
+.active-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1}
+.a-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(255,215,0,0.09);border:1px solid rgba(255,215,0,0.22);border-radius:999px;font-size:11px;color:#FFD700;font-weight:600}
+.a-tag button{background:none;border:none;color:rgba(255,215,0,0.5);cursor:pointer;padding:0;font-size:14px;line-height:1}
+.a-tag button:hover{color:#ef4444}
+.results-bar{display:none;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(16,16,16,0.7);border:1px solid rgba(255,215,0,0.1);border-radius:12px;margin-bottom:22px;flex-wrap:wrap;gap:10px}
+.res-count{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
+.res-count span{color:#FFD700}
+.sort-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sort-lbl{font-size:12px;color:#555;white-space:nowrap}
+.sort-chip{padding:5px 13px;border-radius:999px;border:1px solid rgba(255,215,0,0.1);background:transparent;color:#555;font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;transition:all 0.18s;white-space:nowrap}
+.sort-chip:hover{border-color:rgba(255,215,0,0.3);color:#aaa}
+.sort-chip.on{background:rgba(255,215,0,0.09);border-color:rgba(255,215,0,0.4);color:#FFD700;font-weight:600}
+.clear-btn{padding:5px 14px;border-radius:999px;border:1px solid rgba(239,68,68,0.25);background:transparent;color:#ef4444;font-size:12px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;transition:all 0.18s}
+.clear-btn:hover{background:rgba(239,68,68,0.07);border-color:rgba(239,68,68,0.5)}
+@media(max-width:640px){.search-main-bar{flex-wrap:wrap;padding:8px;gap:6px}.search-main-bar input{width:100%}.s-divider{display:none}.search-type-sel,.filter-btn{flex:1}.go-btn{width:100%}.fp-grid{grid-template-columns:1fr}}
+</style>
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+</head>
+<body>
+
+<nav style="position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,10,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,215,0,0.08);">
+  <a href="home.html" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;background:linear-gradient(90deg,#FFD700,#FFA500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;"> RealEstate</a>
+  <div style="display:flex;gap:18px;align-items:center;">
+    <div style="display:flex;gap:15px;margin-right:10px;">
+      <a href="calculators.html" style="color:#aaa;text-decoration:none;font-size:14px;font-weight:600;"> Calculators</a>
+      <a href="compare.html" style="color:#aaa;text-decoration:none;font-size:14px;font-weight:600;"> Compare</a>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <button id="homeThemeToggle" title="Toggle Theme" style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:8px;padding:6px 12px;color:#FFD700;font-size:16px;cursor:pointer;transition:all 0.2s;flex-shrink:0;">&#127769;</button>
+      <div style="display:flex;gap:12px;align-items:center;" id="navButtons">
+        <a href="login.html" class="btn btn-outline btn-sm">Login</a>
+        <a href="signup.html" class="btn btn-gold btn-sm">Sign Up</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<section class="home-hero" style="padding-top:110px;padding-bottom:60px;">
+  <div class="hero-bg-text">REALESTATE</div>
+  <div class="hero-badge"><span>Trusted Property Platform</span></div>
+  <h1 class="hero-title">Find Your<br><span class="gold-text">Perfect Property</span></h1>
+  <p class="hero-sub">Discover thousands of verified properties. Buy, sell or rent - all in one place.</p>
+
+  <div class="search-hero-wrap">
+    <div class="search-main-bar">
+      <input type="text" id="searchInput" placeholder=" City, area or zip code..." autocomplete="off">
+      <div class="s-divider"></div>
+      <select class="search-type-sel" id="typeFilter" onchange="doSearch()">
+        <option value="all"> All Types</option>
+        <option value="Sale"> For Sale</option>
+        <option value="Rent"> For Rent</option>
+      </select>
+      <div class="s-divider"></div>
+      <button class="filter-btn" id="filterBtn" onclick="togglePanel()">
+         <span id="filterBtnTxt">Filters</span>
+        <span class="f-badge" id="fBadge">0</span>
+      </button>
+      <button class="go-btn" onclick="doSearch()">Search -></button>
+    </div>
+
+    <div class="filter-panel" id="filterPanel">
+      <div class="filter-panel-inner">
+        <div class="fp-grid">
+          <div>
+            <div class="fp-label"> Price Range</div>
+            <div class="price-disp"><span id="minPD">Rs. 0</span><span id="maxPD">Rs. 10Cr+</span></div>
+            <div class="range-wrap">
+              <div class="range-track-bg"></div>
+              <div class="range-fill" id="rFill"></div>
+              <input type="range" class="r-slider" id="minSlider" min="0" max="100" value="0" oninput="syncRange()" onchange="doSearch()">
+              <input type="range" class="r-slider" id="maxSlider" min="0" max="100" value="100" oninput="syncRange()" onchange="doSearch()">
+            </div>
+          </div>
+          <div>
+            <div class="fp-label"> Property Type</div>
+            <div class="chips" id="typeChips">
+              <span class="chip" data-v="Apartment"> Apartment</span>
+              <span class="chip" data-v="Villa"> Villa</span>
+              <span class="chip" data-v="House"> House</span>
+              <span class="chip" data-v="Plot"> Plot</span>
+              <span class="chip" data-v="Commercial"> Commercial</span>
+            </div>
+          </div>
+          <div>
+            <div class="fp-label"> Bedrooms (BHK)</div>
+            <div class="chips" id="bhkChips">
+              <span class="chip" data-v="1">1 BHK</span>
+              <span class="chip" data-v="2">2 BHK</span>
+              <span class="chip" data-v="3">3 BHK</span>
+              <span class="chip" data-v="4">4 BHK</span>
+              <span class="chip" data-v="5">5+ BHK</span>
+            </div>
+          </div>
+          <div>
+            <div class="fp-label"> Deal Score</div>
+            <div class="chips" id="dealChips">
+              <span class="chip" data-v="Great Deal"> Great Deal</span>
+              <span class="chip" data-v="Fair Price"> Fair Price</span>
+              <span class="chip" data-v="Overpriced"> Overpriced</span>
+            </div>
+          </div>
+        </div>
+        <div class="fp-footer">
+          <div class="active-tags" id="activeTags">
+            <span style="font-size:12px;color:#444;">No filters applied</span>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="clear-btn" onclick="clearAll()"> Clear All</button>
+            <button class="go-btn" style="padding:9px 18px;font-size:13px" onclick="doSearch()">Apply -></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-actions" style="margin-top:8px;">
+    <a href="#listings" class="btn btn-gold">Browse Properties</a>
+    <a href="add-property.html" class="btn btn-outline">List Your Property</a>
+  </div>
+</section>
+
+<section style="padding:32px;position:relative;z-index:1;background:rgba(13,13,13,0.9);border-top:1px solid rgba(255,215,0,0.06);border-bottom:1px solid rgba(255,215,0,0.06);">
+  <div style="max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;text-align:center;">
+    <div style="padding:14px;border-right:1px solid rgba(255,215,0,0.08);">
+      <div style="font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:#FFD700;" id="totalCount">12+</div>
+      <div style="color:#666;font-size:13px;margin-top:3px;">Properties</div>
+    </div>
+    <div style="padding:14px;border-right:1px solid rgba(255,215,0,0.08);">
+      <div style="font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:#FFD700;">50K+</div>
+      <div style="color:#666;font-size:13px;margin-top:3px;">Happy Buyers</div>
+    </div>
+    <div style="padding:14px;border-right:1px solid rgba(255,215,0,0.08);">
+      <div style="font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:#FFD700;">100+</div>
+      <div style="color:#666;font-size:13px;margin-top:3px;">Cities</div>
+    </div>
+    <div style="padding:14px;">
+      <div style="font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:#FFD700;">4.8</div>
+      <div style="color:#666;font-size:13px;margin-top:3px;">Rating</div>
+    </div>
+  </div>
+</section>
+
+<section id="listings" style="padding:50px 28px 60px;position:relative;z-index:1;max-width:1300px;margin:0 auto;">
+  <h2 class="section-title"> Latest Properties</h2>
+
+  <div class="results-bar" id="resultsBar">
+    <div class="res-count" id="resCountTxt">Showing <span>0</span> properties</div>
+    <div class="sort-row">
+      <span class="sort-lbl">Sort:</span>
+      <button class="sort-chip on" data-s="newest" onclick="setSort(this,'newest')">- Newest</button>
+      <button class="sort-chip" data-s="price-lo" onclick="setSort(this,'price-lo')"> Price </button>
+      <button class="sort-chip" data-s="price-hi" onclick="setSort(this,'price-hi')"> Price </button>
+      <button class="sort-chip" data-s="area" onclick="setSort(this,'area')"> Largest</button>
+      <button class="clear-btn" onclick="clearAll()"> Clear</button>
+    </div>
+  </div>
+
+  <div class="filter-tabs" id="defTabs">
+    <button class="filter-tab active" data-f="all">All</button>
+    <button class="filter-tab" data-f="Sale">For Sale</button>
+    <button class="filter-tab" data-f="Rent">For Rent</button>
+  </div>
+
+  <div class="cards-grid" id="propGrid"></div>
+</section>
+
+
+
+<footer style="padding:32px;border-top:1px solid rgba(255,215,0,0.08);text-align:center;position:relative;z-index:1;">
+  <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;background:linear-gradient(90deg,#FFD700,#FFA500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;"> RealEstate</div>
+  <p style="color:#444;font-size:13px;">Your trusted property platform.</p>
+  <div style="display:flex;gap:16px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
+    <a href="home.html" style="color:#444;font-size:13px;text-decoration:none;">Home</a>
+    <a href="calculators.html" style="color:#444;font-size:13px;text-decoration:none;">Calculators</a>
+    <a href="compare.html" style="color:#444;font-size:13px;text-decoration:none;">Compare</a>
+    <a href="login.html" style="color:#444;font-size:13px;text-decoration:none;">Login</a>
+    <a href="signup.html" style="color:#444;font-size:13px;text-decoration:none;">Sign Up</a>
+    <a href="add-property.html" style="color:#444;font-size:13px;text-decoration:none;">List Property</a>
+  </div>
+  <p style="color:#2a2a2a;font-size:11px;margin-top:18px;">&copy; 2025 RealEstate. All rights reserved.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+// ============================================================
+// HOME PAGE — Filter helpers + rendering
+// ============================================================
+
+// ── Price slider helpers ──────────────────────────────────────
+const PRICE_STEPS = [
+  0, 500000, 1000000, 1500000, 2000000, 2500000, 3000000,
+  4000000, 5000000, 7500000, 10000000, 15000000, 20000000,
+  30000000, 50000000, 100000000
+];
+function s2p(v) {
+  const idx = Math.round(v / 100 * (PRICE_STEPS.length - 1));
+  return PRICE_STEPS[Math.min(idx, PRICE_STEPS.length - 1)];
+}
+function fmtPriceLabel(n) {
+  if (n >= 10000000) return '₹' + (n/10000000).toFixed(1) + 'Cr';
+  if (n >= 100000)   return '₹' + (n/100000).toFixed(0) + 'L';
+  if (n === 0)       return '₹0';
+  return '₹' + (n/1000).toFixed(0) + 'K';
+}
+function syncRange() {
+  const minV = +document.getElementById('minSlider').value;
+  const maxV = +document.getElementById('maxSlider').value;
+  // Prevent crossing
+  if (minV > maxV) { document.getElementById('minSlider').value = maxV; return syncRange(); }
+  const minP = s2p(minV), maxP = s2p(maxV);
+  document.getElementById('minPD').textContent = fmtPriceLabel(minP);
+  document.getElementById('maxPD').textContent = maxV >= 100 ? '₹10Cr+' : fmtPriceLabel(maxP);
+  // Update fill bar
+  const fill = document.getElementById('rFill');
+  if (fill) { fill.style.left = minV + '%'; fill.style.right = (100 - maxV) + '%'; }
+  // Update filter badge
+  const activeCount = countActiveFilters();
+  const badge = document.getElementById('fBadge');
+  if (badge) { badge.textContent = activeCount; badge.classList.toggle('show', activeCount > 0); }
+  updateActiveTags();
+}
+
+// ── Filter panel toggle ───────────────────────────────────────
+let panelOpen = false;
+function togglePanel() {
+  panelOpen = !panelOpen;
+  const panel = document.getElementById('filterPanel');
+  const btn   = document.getElementById('filterBtn');
+  if (panel) panel.classList.toggle('open', panelOpen);
+  if (btn)   btn.classList.toggle('active-filters', panelOpen);
+  document.getElementById('filterBtnTxt').textContent = panelOpen ? 'Close ✕' : 'Filters';
+}
+
+// ── Chip toggle ───────────────────────────────────────────────
+document.querySelectorAll('.chip').forEach(function(chip) {
+  chip.addEventListener('click', function() {
+    this.classList.toggle('on');
+    updateActiveTags();
+    countActiveFilters();
+    const badge = document.getElementById('fBadge');
+    const n = countActiveFilters();
+    if (badge) { badge.textContent = n; badge.classList.toggle('show', n > 0); }
+  });
+});
+
+function countActiveFilters() {
+  let n = 0;
+  if (document.querySelectorAll('.chip.on').length) n++;
+  const minV = +document.getElementById('minSlider').value;
+  const maxV = +document.getElementById('maxSlider').value;
+  if (minV > 0 || maxV < 100) n++;
+  const type = document.getElementById('typeFilter').value;
+  if (type && type !== 'all') n++;
+  return n;
+}
+
+function updateActiveTags() {
+  const container = document.getElementById('activeTags');
+  if (!container) return;
+  const tags = [];
+  document.querySelectorAll('.chip.on').forEach(function(c) { tags.push(c.textContent.trim()); });
+  const type = document.getElementById('typeFilter').value;
+  if (type && type !== 'all') tags.push(type === 'Sale' ? 'For Sale' : 'For Rent');
+  const minV = +document.getElementById('minSlider').value;
+  const maxV = +document.getElementById('maxSlider').value;
+  if (minV > 0 || maxV < 100) {
+    tags.push(fmtPriceLabel(s2p(minV)) + ' – ' + (maxV >= 100 ? '10Cr+' : fmtPriceLabel(s2p(maxV))));
+  }
+  if (tags.length === 0) {
+    container.innerHTML = '<span style="font-size:12px;color:#444;">No filters applied</span>';
+  } else {
+    container.innerHTML = tags.map(function(t) {
+      return '<span class="a-tag">' + t + '<button onclick="removeTag(\'' + t + '\')">×</button></span>';
+    }).join('');
+  }
+}
+
+function removeTag(label) {
+  // Try to find matching chip
+  document.querySelectorAll('.chip.on').forEach(function(c) {
+    if (c.textContent.trim() === label) c.classList.remove('on');
+  });
+  if (label === 'For Sale') document.getElementById('typeFilter').value = 'all';
+  if (label === 'For Rent') document.getElementById('typeFilter').value = 'all';
+  syncRange();
+  doSearch();
+}
+
+// ── Sort chips ────────────────────────────────────────────────
+var currentSort = 'newest';
+function setSort(el, s) {
+  currentSort = s;
+  document.querySelectorAll('.sort-chip').forEach(function(c) { c.classList.remove('on'); });
+  el.classList.add('on');
+  doSearch();
+}
+
+// ── Render grid ───────────────────────────────────────────────
+async function renderGrid(props) {
+  renderPropertyGrid('propGrid', props);
+  var countEl = document.getElementById('totalCount');
+  if (countEl) {
+    const all = await Store.getProperties();
+    countEl.textContent = all.length + '+';
+  }
+}
+
+
+// ── Filter tabs ───────────────────────────────────────────────
+document.getElementById('defTabs').addEventListener('click', async function(e) {
+  var btn = e.target.closest('.filter-tab');
+  if (!btn) return;
+  document.querySelectorAll('#defTabs .filter-tab').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('resultsBar').style.display = 'none';
+  document.getElementById('defTabs').style.display = 'flex';
+  var f = btn.getAttribute('data-f');
+  const ALL_PROPS = await Store.getProperties();
+  var filtered = f === 'all' ? ALL_PROPS : ALL_PROPS.filter(function(p) { return p.listingType === f; });
+  await renderGrid(filtered);
+});
+
+// ── Search / filter ───────────────────────────────────────────
+async function doSearch() {
+  var q    = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  var type = document.getElementById('typeFilter').value;
+  var mn   = s2p(+document.getElementById('minSlider').value);
+  var mx   = s2p(+document.getElementById('maxSlider').value);
+  var maxU = +document.getElementById('maxSlider').value >= 100;
+
+  var selTypes = Array.from(document.querySelectorAll('#typeChips .chip.on')).map(function(c){return c.getAttribute('data-v');});
+  var selBhk   = Array.from(document.querySelectorAll('#bhkChips .chip.on')).map(function(c){return +c.getAttribute('data-v');});
+  var selDeals = Array.from(document.querySelectorAll('#dealChips .chip.on')).map(function(c){return c.getAttribute('data-v');});
+
+  renderSkeletonGrid('propGrid', 6);
+
+  var props = await Store.search({
+    q, listingType: type, minPrice: mn, maxPrice: mx, maxUnbounded: maxU,
+    types: selTypes, bhk: selBhk, deals: selDeals, sort: currentSort
+  });
+
+  document.getElementById('resultsBar').style.display = 'flex';
+  document.getElementById('defTabs').style.display = 'none';
+  document.getElementById('resCountTxt').innerHTML =
+    'Showing <span>' + props.length + '</span> propert' + (props.length !== 1 ? 'ies' : 'y') +
+    (q ? " for <b style='color:#e6b94a'>" + q + '</b>' : '');
+
+  await renderGrid(props);
+  document.getElementById('listings').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ── Clear all ─────────────────────────────────────────────────
+async function clearAll() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('typeFilter').value  = 'all';
+  document.getElementById('minSlider').value   = 0;
+  document.getElementById('maxSlider').value   = 100;
+  syncRange();
+  document.querySelectorAll('.chip.on').forEach(function(c) { c.classList.remove('on'); });
+  currentSort = 'newest';
+  document.querySelectorAll('.sort-chip').forEach(function(c) { c.classList.remove('on'); });
+  var n = document.querySelector(".sort-chip[data-s='newest']");
+  if (n) n.classList.add('on');
+  document.getElementById('resultsBar').style.display = 'none';
+  document.getElementById('defTabs').style.display    = 'flex';
+  document.querySelectorAll('#defTabs .filter-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelector("#defTabs .filter-tab[data-f='all']").classList.add('active');
+  updateActiveTags();
+  const ALL_PROPS = await Store.getProperties();
+  await renderGrid(ALL_PROPS);
+}
+
+// ── Enter key search ──────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') doSearch(); });
+
+// ── Theme init & toggle ───────────────────────────────────────
+(function() {
+  var t = localStorage.getItem('re_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  var btn = document.getElementById('homeThemeToggle');
+  if (btn) {
+    btn.textContent = t === 'dark' ? '🌙' : '☀️';
+    btn.addEventListener('click', function() {
+      var cur  = document.documentElement.getAttribute('data-theme');
+      var next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('re_theme', next);
+      btn.textContent = next === 'dark' ? '🌙' : '☀️';
+    });
+  }
+})();
+
+// ── Nav: show user if logged in ───────────────────────────────
+window.addEventListener('DOMContentLoaded', async function() {
+  // Init range display
+  syncRange();
+
+  // Slider live update
+  document.getElementById('minSlider').addEventListener('input', syncRange);
+  document.getElementById('maxSlider').addEventListener('input', syncRange);
+
+  // Update nav for logged-in user
+  const user = await Auth.getUser();
+  if (user) {
+    const nav = document.getElementById('navButtons');
+    if (nav) {
+      nav.innerHTML =
+        '<span style="color:#777;font-size:14px;margin-right:10px;">' + (user.full_name || user.email.split('@')[0]) + '</span>' +
+        '<a href="index.html" class="btn btn-gold btn-sm">Dashboard &rarr;</a>';
+    }
+  }
+
+  // Load all properties
+  const all = await Store.getProperties();
+  await renderGrid(all);
+});
+
+</script>
+</body>
+</html>
