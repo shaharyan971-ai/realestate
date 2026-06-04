@@ -1176,8 +1176,20 @@ function getDefaultMessages() {
 // HAMBURGER + SIDEBAR
 // ============================================
 function initSidebar() {
-  const hamburger = document.getElementById('hamburger');
   const sidebar = document.getElementById('sidebar');
+  if (sidebar && !sidebar.querySelector('a[href="property-catalog.html"]')) {
+    const myPropsLink = sidebar.querySelector('a[href="properties.html"]');
+    const catalogLink = document.createElement('a');
+    catalogLink.href = 'property-catalog.html';
+    catalogLink.innerHTML = '<span class="nav-icon">📋</span> Property Catalog<span class="nav-arrow"></span>';
+    if (myPropsLink) {
+      myPropsLink.after(catalogLink);
+    } else {
+      sidebar.appendChild(catalogLink);
+    }
+  }
+
+  const hamburger = document.getElementById('hamburger');
   const overlay = document.getElementById('overlay');
 
   if (!hamburger || !sidebar) return;

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Catalog - RealEstate</title>
+
+<!-- Tailwind CDN & Custom config for shadcn design variables -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="tailwind-config.js"></script>
+<link rel="stylesheet" href="style.css">
+
+<!-- PWA & App Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+<style>
+  /* Table styling enhancements to align with shadcn tables */
+  .catalog-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    text-align: left;
+  }
+  .catalog-table th {
+    font-weight: 600;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.07));
+    color: var(--text-muted, #a0a0a0);
+  }
+  .catalog-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.07));
+    color: var(--text-main, #ffffff);
+  }
+  .catalog-table tr {
+    transition: background-color 0.15s ease;
+  }
+  .catalog-table tr:hover {
+    background-color: rgba(255,255,255,0.02);
+  }
+  /* Shimmer skeleton loader */
+  .skeleton-row td {
+    padding: 18px 16px;
+  }
+  .skeleton-bar {
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+    animation: loading-shimmer 1.5s infinite;
+  }
+  @keyframes loading-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar navigation (will be updated dynamically by script.js) -->
+<div class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-brand"> RealEstate</a>
+  <a href="index.html"><span class="nav-icon"></span> Dashboard<span class="nav-arrow"></span></a>
+  <a href="profile.html"><span class="nav-icon"></span> My Profile<span class="nav-arrow"></span></a>
+  <a href="properties.html"><span class="nav-icon"></span> My Properties<span class="nav-arrow"></span></a>
+  <a href="add-property.html"><span class="nav-icon"></span> Add Property<span class="nav-arrow"></span></a>
+  <a href="messages.html"><span class="nav-icon"></span> Messages<span class="nav-arrow"></span></a>
+  <a href="favorites.html"><span class="nav-icon"></span> Favorites<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="calculators.html"><span class="nav-icon"></span> Calculators<span class="nav-arrow"></span></a>
+  <a href="compare.html"><span class="nav-icon"></span> Compare<span class="nav-arrow"></span></a>
+  <div class="sidebar-divider"></div>
+  <a href="home.html"><span class="nav-icon"></span> Browse Properties<span class="nav-arrow"></span></a>
+  <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;"><span class="nav-icon"></span> Sign Out<span class="nav-arrow"></span></a>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+  <div class="page-header">
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+    <div>
+      <h1 id="welcomeMsg">Property Catalog</h1>
+      <p>System properties database table view</p>
+    </div>
+    <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+      <button onclick="exportPropertiesCSV()" class="btn btn-outline btn-sm">📥 Export CSV</button>
+      <a href="add-property.html" class="btn btn-gold btn-sm">+ Add Listing</a>
+    </div>
+  </div>
+
+  <!-- Search & Filter Bar Card -->
+  <div class="mb-6 p-5 rounded-xl border border-border bg-card text-card-foreground shadow-sm">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Search</label>
+        <input type="text" id="searchFilter" placeholder="Title or location..." class="w-full px-3 py-2 bg-muted/40 border border-border rounded-lg text-sm outline-none focus:border-primary">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Property Type</label>
+        <select id="typeFilter" class="w-full px-3 py-2 bg-muted/40 border border-border rounded-lg text-sm outline-none focus:border-primary">
+          <option value="all">All Types</option>
+          <option value="Apartment">Apartment</option>
+          <option value="Villa">Villa</option>
+          <option value="House">House</option>
+          <option value="Commercial">Commercial</option>
+          <option value="Plot">Plot</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Min Price</label>
+        <input type="number" id="minPriceFilter" placeholder="Min price..." class="w-full px-3 py-2 bg-muted/40 border border-border rounded-lg text-sm outline-none focus:border-primary">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Max Price</label>
+        <input type="number" id="maxPriceFilter" placeholder="Max price..." class="w-full px-3 py-2 bg-muted/40 border border-border rounded-lg text-sm outline-none focus:border-primary">
+      </div>
+    </div>
+    <div class="flex justify-between items-center mt-4 pt-3 border-t border-border/40">
+      <span class="text-xs text-muted-foreground">Showing <strong id="visibleCount" class="text-foreground">0</strong> of <strong id="totalCount" class="text-foreground">0</strong> listings</span>
+      <button onclick="resetFilters()" class="text-xs font-semibold text-primary underline underline-offset-4 hover:text-primary/80">Clear Filters</button>
+    </div>
+  </div>
+
+  <!-- Properties Table Card -->
+  <div class="rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden mb-8">
+    <div class="overflow-x-auto">
+      <table class="catalog-table" id="catalogTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Location</th>
+            <th>Price</th>
+            <th>Sqft</th>
+            <th class="text-center">Featured</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="catalogBody">
+          <!-- Loading skeleton will render here initially -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js?v=8"></script>
+<script>
+let properties = [];
+
+// Initialize Page
+async function init() {
+  renderSkeleton();
+  await loadData();
+  setupFilterListeners();
+}
+
+// Render Loading Skeleton
+function renderSkeleton() {
+  const body = document.getElementById('catalogBody');
+  if (!body) return;
+  
+  let html = '';
+  for (let i = 0; i < 5; i++) {
+    html += `
+      <tr class="skeleton-row">
+        <td><div class="skeleton-bar w-12"></div></td>
+        <td><div class="skeleton-bar w-40"></div></td>
+        <td><div class="skeleton-bar w-16"></div></td>
+        <td><div class="skeleton-bar w-32"></div></td>
+        <td><div class="skeleton-bar w-24"></div></td>
+        <td><div class="skeleton-bar w-16"></div></td>
+        <td><div class="skeleton-bar w-10 mx-auto"></div></td>
+        <td><div class="skeleton-bar w-36 ml-auto"></div></td>
+      </tr>
+    `;
+  }
+  body.innerHTML = html;
+}
+
+// Fetch Properties from API (fallback to local Store on failure)
+async function loadData() {
+  try {
+    const response = await fetch('http://localhost:3001/api/properties');
+    if (!response.ok) throw new Error('API server response failed');
+    const apiProps = await response.json();
+    // Map database properties to match Store properties structure if needed
+    properties = apiProps.map(p => ({
+      id: p._id || p.id,
+      title: p.title,
+      price: p.price,
+      location: p.location,
+      area: p.sqft || p.area,
+      category: p.category || 'Apartment',
+      listingType: p.type || p.listingType || 'Sale',
+      featured: p.featured || false,
+      image: p.image
+    }));
+    console.log("Loaded data from Node Express API");
+  } catch (err) {
+    console.warn("Express API failed, loading from local Store:", err.message);
+    properties = await Store.getProperties();
+  }
+  
+  renderTable(properties);
+  document.getElementById('totalCount').textContent = properties.length;
+}
+
+// Render Table Rows
+function renderTable(list) {
+  const body = document.getElementById('catalogBody');
+  if (!body) return;
+
+  if (list.length === 0) {
+    body.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted, #a0a0a0);">
+          <span style="font-size: 2rem; display: block; margin-bottom: 10px;">🔍</span>
+          <strong>No properties found matching filters</strong>
+        </td>
+      </tr>
+    `;
+    document.getElementById('visibleCount').textContent = 0;
+    return;
+  }
+
+  body.innerHTML = list.map(p => {
+    const shortId = p.id ? String(p.id).slice(-6).toUpperCase() : 'N/A';
+    const isRent = p.listingType === 'Rent';
+    const badgeClass = isRent ? 'rent' : 'sale';
+    const cleanId = String(p.id).trim();
+
+    return `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; font-size: 0.75rem; opacity: 0.8;">#${shortId}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="${p.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=100'}" 
+                 style="width: 32px; height: 32px; object-fit: cover; border-radius: 6px;" 
+                 onerror="this.src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=100'">
+            <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${p.title}">
+              ${p.title}
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="prop-badge ${badgeClass}" style="font-size: 0.7rem; padding: 2px 8px;">
+            ${p.listingType || 'Sale'}
+          </span>
+        </td>
+        <td style="opacity: 0.85; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.location}</td>
+        <td style="font-weight: 700; color: var(--gold, #e6b94a);">${formatCurrency(p.price)}</td>
+        <td>${p.area || '-'} sqft</td>
+        <td class="text-center">
+          ${p.featured ? `
+            <span class="inline-flex items-center rounded-full bg-green-500/10 px-2 py-1 text-xs font-semibold text-green-500 border border-green-500/20">
+              Yes
+            </span>` : `
+            <span class="inline-flex items-center rounded-full bg-muted/40 px-2 py-1 text-xs font-semibold text-muted-foreground border border-border">
+              No
+            </span>`}
+        </td>
+        <td class="text-right">
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <a href="property-detail.html?id=${cleanId}" class="btn btn-gold btn-sm" style="padding: 4px 10px; font-size: 0.75rem;">View</a>
+            <a href="add-property.html?edit=${cleanId}" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.75rem;">Edit</a>
+            <button onclick="window.open('http://localhost:3001/api/properties/${cleanId}/pdf', '_blank')" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.75rem; color: var(--gold, #e6b94a); border-color: rgba(230,185,74,0.3)">PDF</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  document.getElementById('visibleCount').textContent = list.length;
+}
+
+// Setup real-time listeners for Search & Filters
+function setupFilterListeners() {
+  const searchInput = document.getElementById('searchFilter');
+  const typeSelect = document.getElementById('typeFilter');
+  const minPriceInput = document.getElementById('minPriceFilter');
+  const maxPriceInput = document.getElementById('maxPriceFilter');
+
+  const triggerFilter = () => {
+    const q = searchInput.value.toLowerCase().trim();
+    const type = typeSelect.value;
+    const minPrice = parseFloat(minPriceInput.value) || 0;
+    const maxPrice = parseFloat(maxPriceInput.value) || Infinity;
+
+    const filtered = properties.filter(p => {
+      const matchSearch = q === '' || 
+        p.title.toLowerCase().includes(q) || 
+        p.location.toLowerCase().includes(q);
+      const matchType = type === 'all' || p.category === type;
+      const matchPrice = p.price >= minPrice && p.price <= maxPrice;
+
+      return matchSearch && matchType && matchPrice;
+    });
+
+    renderTable(filtered);
+  };
+
+  searchInput.addEventListener('input', triggerFilter);
+  typeSelect.addEventListener('change', triggerFilter);
+  minPriceInput.addEventListener('input', triggerFilter);
+  maxPriceInput.addEventListener('input', triggerFilter);
+}
+
+// Reset filter state
+function resetFilters() {
+  document.getElementById('searchFilter').value = '';
+  document.getElementById('typeFilter').value = 'all';
+  document.getElementById('minPriceFilter').value = '';
+  document.getElementById('maxPriceFilter').value = '';
+  renderTable(properties);
+}
+
+// Run init
+init();
+
+</script>
+</body>
+</html>
