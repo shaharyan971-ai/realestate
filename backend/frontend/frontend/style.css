@@ -66,6 +66,24 @@
   --popover-shadcn: oklch(0.205 0 0);
   --popover-fg-shadcn: oklch(0.985 0 0);
   --radius-shadcn: 0.625rem;
+
+  /* ── Chart colours (SupplyWise chart-1 … chart-5) ── */
+  /* Mapped to a gold-warm palette that fits the RealEstate dark theme */
+  --chart-1: oklch(0.768 0.161 72.5);   /* amber-gold   */
+  --chart-2: oklch(0.696 0.17  162.5);  /* teal-green   */
+  --chart-3: oklch(0.627 0.265 303.9);  /* violet       */
+  --chart-4: oklch(0.828 0.189 84.4);   /* warm-yellow  */
+  --chart-5: oklch(0.769 0.188 70.1);   /* deep-amber   */
+
+  /* ── Sidebar tokens (SupplyWise sidebar.*) ── */
+  --sidebar:                  oklch(0.178 0 0);
+  --sidebar-foreground:       oklch(0.985 0 0);
+  --sidebar-primary:          oklch(0.922 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --sidebar-accent:           oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border:           oklch(1 0 0 / 10%);
+  --sidebar-ring:             oklch(0.556 0 0);
 }
 
 /* Light Theme Overrides */
@@ -107,6 +125,23 @@
   --card-fg-shadcn: oklch(0.145 0 0);
   --popover-shadcn: oklch(1 0 0);
   --popover-fg-shadcn: oklch(0.145 0 0);
+
+  /* ── Chart colours — light mode ── */
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6   0.118 184.704);
+  --chart-3: oklch(0.398 0.07  227.392);
+  --chart-4: oklch(0.828 0.189 84.4);
+  --chart-5: oklch(0.769 0.188 70.1);
+
+  /* ── Sidebar tokens — light mode ── */
+  --sidebar:                  oklch(0.985 0 0);
+  --sidebar-foreground:       oklch(0.145 0 0);
+  --sidebar-primary:          oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent:           oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border:           oklch(0.922 0 0);
+  --sidebar-ring:             oklch(0.708 0 0);
 }
 
 /* ============================================
