@@ -628,6 +628,65 @@ app.get('/api/admin/webhooks/logs', async (req, res) => {
   res.json(webhookLogs);
 });
 
+// ============================================================
+// ROUTE PROTECTION — Catalog Page
+// Inspired by SupplyWise middleware.ts:
+//   const isProtectedRoute = createRouteMatcher(["/catalog(.*)"])
+//   clerkMiddleware(async (auth, req) => { if (isProtectedRoute(req)) await auth.protect(); })
+//
+// Our vanilla equivalent: frontend calls this endpoint on page load.
+// Returns 200 (allowed) or 401/403 (blocked) based on role.
+// ============================================================
+
+/**
+ * requireCatalogAccess — reusable RBAC middleware for catalog routes.
+ * Only admin and agent roles are permitted.
+ * Mirrors SupplyWise's isProtectedRoute('/catalog(.*)') guard.
+ */
+function requireCatalogAccess(req, res, next) {
+  const role = req.query.role || req.headers['x-user-role'] || null;
+
+  // No role supplied = unauthenticated
+  if (!role) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'You must be logged in to access the Property Catalog.',
+      redirect: '/login.html'
+    });
+  }
+
+  const allowedRoles = ['admin', 'agent'];
+  if (!allowedRoles.includes(role)) {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: `Access denied. Property Catalog requires admin or agent role. Your role: "${role}".`,
+      redirect: '/index.html'
+    });
+  }
+
+  next();
+}
+
+/**
+ * GET /api/protected/catalog-access
+ * Frontend calls this on property-catalog.html load to verify access.
+ * Returns { allowed: true, role } on success.
+ *
+ * Protected routes (mirrors SupplyWise middleware.ts matchers):
+ *   /catalog      → property-catalog.html
+ *   /dashboard    → index.html admin view
+ *   /csv export   → already protected by requireRole('admin','agent')
+ */
+app.get('/api/protected/catalog-access', requireCatalogAccess, (req, res) => {
+  const role = req.query.role || req.headers['x-user-role'];
+  res.json({
+    allowed: true,
+    role,
+    message: `Catalog access granted for role: ${role}`,
+    protectedRoutes: ['/catalog', '/api/properties/csv', '/api/admin/*']
+  });
+});
+
 // 5. START SERVER
 const PORT = 3001;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

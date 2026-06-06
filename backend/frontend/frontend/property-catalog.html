@@ -163,9 +163,82 @@
 <script>
 let properties = [];
 
+// ============================================================
+// ROUTE PROTECTION — Catalog Page Guard
+// Converted from SupplyWise middleware.ts:
+//   clerkMiddleware(async (auth, req) => {
+//     if (isProtectedRoute(req)) await auth.protect();
+//   })
+//
+// Our vanilla equivalent: check Supabase role client-side,
+// then verify with the backend /api/protected/catalog-access endpoint.
+// Buyers and unauthenticated users are redirected immediately.
+// ============================================================
+async function guardCatalogPage() {
+  try {
+    // Step 1 — Get logged-in user from Supabase (via Auth helper in script.js)
+    const user = await Auth.getUser();
+
+    // Step 2 — Not logged in at all → redirect to login
+    if (!user) {
+      showToast('Please log in to access the Property Catalog.', 'error');
+      setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+      return false;
+    }
+
+    const role = user.role || 'buyer';
+
+    // Step 3 — Verify with backend RBAC endpoint (mirrors SupplyWise auth.protect())
+    let backendCheck = null;
+    try {
+      const res = await fetch(`http://localhost:3001/api/protected/catalog-access?role=${role}`);
+      backendCheck = await res.json();
+
+      if (!res.ok) {
+        // 401 Unauthorized
+        if (res.status === 401) {
+          showToast('Session expired. Please log in again.', 'error');
+          setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+          return false;
+        }
+        // 403 Forbidden — logged in but wrong role (buyer, etc.)
+        if (res.status === 403) {
+          showToast(`Access denied: Property Catalog is for agents and admins only.`, 'error');
+          setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+          return false;
+        }
+        throw new Error(backendCheck?.message || 'Access check failed');
+      }
+    } catch (fetchErr) {
+      // Backend offline → fall back to client-side role check only
+      console.warn('[CatalogGuard] Backend offline, using client-side role check only.');
+      if (!['admin', 'agent'].includes(role)) {
+        showToast('Access denied: only agents and admins can view the Property Catalog.', 'error');
+        setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+        return false;
+      }
+    }
+
+    // Step 4 — Access granted
+    console.log(`[CatalogGuard] ✅ Access granted for role: ${role}`);
+    return true;
+
+  } catch (err) {
+    console.error('[CatalogGuard] Error during access check:', err);
+    showToast('Unable to verify access. Redirecting...', 'error');
+    setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+    return false;
+  }
+}
+
 // Initialize Page
 async function init() {
   renderSkeleton();
+
+  // Run route protection guard FIRST (mirrors SupplyWise isProtectedRoute + auth.protect())
+  const allowed = await guardCatalogPage();
+  if (!allowed) return; // Redirected — don't load data
+
   await loadData();
   setupFilterListeners();
 }
