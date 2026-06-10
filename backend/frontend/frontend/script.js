@@ -1176,58 +1176,76 @@ function getDefaultMessages() {
 // HAMBURGER + SIDEBAR
 // ============================================
 function initSidebar() {
-  const sidebar = document.getElementById('sidebar');
+  // ── Guard: prevent double-binding if called more than once ──────────────
+  if (window._sidebarInitDone) return;
+  window._sidebarInitDone = true;
+
+  const sidebar   = document.getElementById('sidebar');
+  const hamburger = document.getElementById('hamburger');
+  const overlay   = document.getElementById('overlay');
+
+  // ── Inject Property Catalog link if missing ─────────────────────────────
   if (sidebar && !sidebar.querySelector('a[href="property-catalog.html"]')) {
     const myPropsLink = sidebar.querySelector('a[href="properties.html"]');
     const catalogLink = document.createElement('a');
     catalogLink.href = 'property-catalog.html';
-    catalogLink.innerHTML = '<span class="nav-icon">📋</span> Property Catalog<span class="nav-arrow"></span>';
-    if (myPropsLink) {
-      myPropsLink.after(catalogLink);
-    } else {
-      sidebar.appendChild(catalogLink);
-    }
+    catalogLink.innerHTML = '<span class="nav-icon">📋</span> Property Catalog<span class="nav-arrow">›</span>';
+    if (myPropsLink) myPropsLink.after(catalogLink);
+    else if (sidebar) sidebar.appendChild(catalogLink);
   }
 
-  const hamburger = document.getElementById('hamburger');
-  const overlay = document.getElementById('overlay');
-
+  // ── No sidebar or hamburger on this page (home/login/signup) → exit ─────
   if (!hamburger || !sidebar) return;
 
+  // ── Open / Close helpers ────────────────────────────────────────────────
   function openSidebar() {
     hamburger.classList.add('open');
     sidebar.classList.add('active');
-    overlay.classList.add('active');
+    if (overlay) { overlay.classList.add('active'); }
     document.body.style.overflow = 'hidden';
   }
 
   function closeSidebar() {
     hamburger.classList.remove('open');
     sidebar.classList.remove('active');
-    overlay.classList.remove('active');
+    if (overlay) { overlay.classList.remove('active'); }
     document.body.style.overflow = '';
   }
 
+  // ── Hamburger toggle ────────────────────────────────────────────────────
   hamburger.addEventListener('click', () => {
     sidebar.classList.contains('active') ? closeSidebar() : openSidebar();
   });
 
-  overlay.addEventListener('click', closeSidebar);
+  // ── Overlay click closes sidebar ────────────────────────────────────────
+  if (overlay) overlay.addEventListener('click', closeSidebar);
 
+  // ── Escape key closes sidebar ───────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSidebar();
   });
 
-  // Close on nav link clicks (mobile)
+  // ── Nav link click closes sidebar on mobile ─────────────────────────────
   sidebar.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', closeSidebar);
+    link.addEventListener('click', () => {
+      // Only close — don't prevent navigation
+      closeSidebar();
+    });
   });
 
-  // Highlight active link
-  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-  sidebar.querySelectorAll('a').forEach(link => {
-    const href = link.getAttribute('href');
-    if (href === currentPage) link.classList.add('active-link');
+  // ── Highlight the active page link ──────────────────────────────────────
+  // pathname.split('/').pop() gives '' for root '/' → fall back to 'index.html'
+  // Also handles query strings like 'index.html?foo=bar'
+  const rawPage    = window.location.pathname.split('/').pop();
+  const currentPage = (rawPage && rawPage !== '') ? rawPage.split('?')[0] : 'index.html';
+
+  sidebar.querySelectorAll('a[href]').forEach(link => {
+    const href = (link.getAttribute('href') || '').split('?')[0];
+    if (href === currentPage) {
+      link.classList.add('active-link');
+    } else {
+      link.classList.remove('active-link'); // clean up any stale highlight
+    }
   });
 }
 

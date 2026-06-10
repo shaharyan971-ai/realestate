@@ -71,7 +71,26 @@
 </head>
 <body>
 
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <a href="home.html" class="sidebar-brand">&#127968; RealEstate</a>
+  <a href="index.html"><span class="nav-icon">&#128202;</span> Dashboard<span class="nav-arrow">&#8250;</span></a>
+  <a href="profile.html"><span class="nav-icon">&#128100;</span> My Profile<span class="nav-arrow">&#8250;</span></a>
+  <a href="properties.html"><span class="nav-icon">&#127960;&#65039;</span> My Properties<span class="nav-arrow">&#8250;</span></a>
+  <a href="add-property.html"><span class="nav-icon">&#10133;</span> Add Property<span class="nav-arrow">&#8250;</span></a>
+  <a href="messages.html"><span class="nav-icon">&#128172;</span> Messages<span class="nav-arrow">&#8250;</span></a>
+  <a href="favorites.html"><span class="nav-icon">&#10084;&#65039;</span> Favorites<span class="nav-arrow">&#8250;</span></a>
+  <div class="sidebar-divider"></div>
+  <a href="calculators.html"><span class="nav-icon">&#129518;</span> Calculators<span class="nav-arrow">&#8250;</span></a>
+  <a href="compare.html"><span class="nav-icon">&#9878;&#65039;</span> Compare<span class="nav-arrow">&#8250;</span></a>
+  <div class="sidebar-divider"></div>
+  <a href="#" id="logoutBtn" class="sidebar-logout" style="display:none;"><span class="nav-icon">&#128682;</span> Sign Out<span class="nav-arrow">&#8250;</span></a>
+</div>
+<div class="overlay" id="overlay"></div>
+
 <nav style="position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,10,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,215,0,0.08);">
+  <!-- Hamburger -->
+  <div class="hamburger" id="hamburger" style="margin-right:14px;flex-shrink:0;"><span></span><span></span><span></span></div>
   <a href="home.html" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;background:linear-gradient(90deg,#FFD700,#FFA500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;"> RealEstate</a>
   <div style="display:flex;gap:18px;align-items:center;">
     <div style="display:flex;gap:15px;margin-right:10px;">
