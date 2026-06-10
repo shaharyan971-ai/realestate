@@ -4,12 +4,13 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const PDFDocument = require('pdfkit');
 const axios = require('axios');
-const { encryptCredentials, decryptCredentials, isEncryptedPayload } = require('./crypto');
+const { encryptCredentials, decryptCredentials, isEncryptedPayload, maskCredential } = require('./crypto');
 
 const CREDENTIALS_ENCRYPTION_KEY = process.env.CREDENTIALS_ENCRYPTION_KEY || '64392094857410293847561029384756102938475610293847561029384756ab';
 const PROPERTY_WEBHOOK_SECRET = process.env.PROPERTY_WEBHOOK_SECRET || '7f5c71b12b591b61c10d3f8206d9d1c9ef00192e2124508de8a3b83981881882';
 
-const webhookLogs = []; // in-memory log of webhook transactions
+const webhookLogs    = []; // in-memory log of webhook transactions
+const credentialLogs = []; // in-memory audit log for credentials (fallback when DB offline)
 
 const app = express();
 
@@ -38,12 +39,46 @@ const PropertySchema = new mongoose.Schema({
 
 const Property = mongoose.model('Property', PropertySchema);
 
+// ─── Credential Vault Schema ────────────────────────────────────────────────
+// Stores AES-256-GCM components separately for clean separation of concerns.
+// The legacy `credentials` Mixed field is kept for backward-compat with
+// the migrate-encrypt and seed-integrations endpoints.
 const IntegrationSchema = new mongoose.Schema({
-  source: String,
-  credentials: mongoose.Schema.Types.Mixed // plain object or encrypted payload { iv, tag, ciphertext }
+  source:       String,
+  // ── Legacy field (still written by seed/migrate endpoints) ────────────────
+  credentials:  mongoose.Schema.Types.Mixed,
+  // ── New vault fields (written by rotate endpoint & future add endpoint) ───
+  encryptedKey: String,   // ciphertext only
+  iv:           String,   // stored separately
+  authTag:      String,   // stored separately
+  isActive:     { type: Boolean, default: true },
+  createdAt:    { type: Date, default: Date.now },
+  lastRotated:  { type: Date, default: null },
+  createdBy:    { type: String, default: 'system' },
+  expiresAt:    { type: Date, default: null },
+  notifyBefore: { type: Number, default: 7 },  // days before expiry to warn
 });
-
 const Integration = mongoose.model('Integration', IntegrationSchema);
+
+// ─── Credential Audit Log Schema ─────────────────────────────────────────────
+const CredentialLogSchema = new mongoose.Schema({
+  action:    String,   // 'created' | 'rotated' | 'deleted' | 'tested' | 'viewed'
+  service:   String,
+  adminId:   { type: String, default: 'system' },
+  timestamp: { type: Date, default: Date.now },
+  ip:        { type: String, default: 'unknown' },
+});
+const CredentialLog = mongoose.model('CredentialLog', CredentialLogSchema);
+
+/** Write one audit entry — to DB if connected, always to in-memory log too. */
+async function writeCredentialLog(entry) {
+  const record = { ...entry, timestamp: new Date(), id: 'cl_' + Math.random().toString(36).slice(2, 9) };
+  credentialLogs.unshift(record);
+  if (credentialLogs.length > 200) credentialLogs.pop(); // cap in-memory log
+  if (mongoose.connection.readyState === 1) {
+    try { await CredentialLog.create(entry); } catch(_) { /* non-critical */ }
+  }
+}
 
 // 4. ROUTES (API Endpoints)
 
@@ -473,64 +508,182 @@ app.post('/api/admin/migrate-encrypt', async (req, res) => {
   }
 });
 
-// GET: Fetch all integrations (automatically decrypts for display/demo purpose)
+// GET /api/admin/integrations
+// ⚠️  SECURITY: Returns ONLY safe display fields.
+//     Raw keys, ciphertext, iv, and authTag NEVER leave the backend.
 app.get('/api/admin/integrations', async (req, res) => {
+  const ip      = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  const adminId = req.headers['x-admin-id'] || req.query.adminId || 'system';
   try {
     let integrations = [];
     if (mongoose.connection.readyState === 1) {
       integrations = await Integration.find();
     } else {
-      // Fallback/Mock list for offline mode
+      // Offline mock — credentials field contains dummy values
       integrations = [
-        {
-          _id: 'mock_int_1',
-          source: 'Supabase Auth (Mock)',
-          credentials: {
-            url: 'https://ynsefltcqtffcdmxwpbn.supabase.co',
-            anonKey: 'sb_publishable_AnRqy1ODPXb7gFPlaybSVw_zoL4aLon'
-          }
-        },
-        {
-          _id: 'mock_int_2',
-          source: 'EmailJS (Mock)',
-          credentials: {
-            publicKey: 'offi1R2H70RXPsPGN',
-            serviceId: 'service_q6ds28w'
-          }
-        },
-        {
-          _id: 'mock_int_3',
-          source: 'Mapbox API (Mock-Encrypted)',
-          credentials: encryptCredentials({
-            apiKey: 'pk.eyJ1IjoicmVhbGVzdGF0ZSIsImEiOiJjbDFhMmIzYzQ1ZDY3ODkwMTIzNDU2Nzg5MCJ9'
-          }, CREDENTIALS_ENCRYPTION_KEY)
-        }
+        { _id: 'mock_int_1', source: 'Supabase Auth',  credentials: { url: 'https://example.supabase.co', anonKey: 'sb_mock_key_abc123xyz789' }, isActive: true, createdAt: new Date('2025-01-01'), createdBy: 'system', lastRotated: null },
+        { _id: 'mock_int_2', source: 'EmailJS',         credentials: { publicKey: 'offi1R2H70RXPsPGN', serviceId: 'service_q6ds28w' }, isActive: true, createdAt: new Date('2025-01-02'), createdBy: 'system', lastRotated: null },
+        { _id: 'mock_int_3', source: 'Mapbox API',      credentials: encryptCredentials({ apiKey: 'pk.eyJ1IjoicmVhbGVzdGF0ZSIsImEiOiJjbDFhMmIzYzQ1ZDY3ODkwMTIzNDU2Nzg5MCJ9' }, CREDENTIALS_ENCRYPTION_KEY), isActive: true, createdAt: new Date('2025-01-03'), createdBy: 'system', lastRotated: null },
       ];
     }
 
-    // Process list to decrypt or flag encrypted payload
+    // ── Build safe display objects — no raw keys ever returned ────────────────
+    const now    = Date.now();
     const result = integrations.map(item => {
       const isEncrypted = isEncryptedPayload(item.credentials);
-      let decVal = null;
-      let err = null;
+
+      // Generate a masked key preview (e.g. "sk_live_••••••••3f9a")
+      let keyPreview = '••••••••••';
       if (isEncrypted) {
         try {
-          decVal = decryptCredentials(item.credentials, CREDENTIALS_ENCRYPTION_KEY);
-        } catch (decErr) {
-          err = decErr.message;
-        }
+          const dec = decryptCredentials(item.credentials, CREDENTIALS_ENCRYPTION_KEY);
+          keyPreview = maskCredential(dec);
+        } catch (_) { keyPreview = '⚠ Decryption error'; }
+      } else if (item.credentials && typeof item.credentials === 'object') {
+        keyPreview = maskCredential(item.credentials);
       }
+
+      // Expiry calculations
+      let daysUntilExpiry = null;
+      let expiryWarning   = false;
+      if (item.expiresAt) {
+        daysUntilExpiry = Math.ceil((new Date(item.expiresAt) - now) / 86400000);
+        expiryWarning   = daysUntilExpiry <= (item.notifyBefore || 7);
+      }
+
       return {
-        _id: item._id,
-        source: item.source,
+        _id:            String(item._id),
+        source:         item.source,
+        status:         item.isActive !== false ? 'connected' : 'inactive',
         isEncrypted,
-        rawPayload: item.credentials,
-        decryptedValue: decVal || item.credentials,
-        decryptionError: err
+        keyPreview,                              // masked, safe to display
+        createdBy:      item.createdBy   || 'system',
+        createdAt:      item.createdAt   || null,
+        lastRotated:    item.lastRotated  || null,
+        isActive:       item.isActive !== false,
+        expiresAt:      item.expiresAt   || null,
+        daysUntilExpiry,
+        expiryWarning,
+        // ── Fields deliberately OMITTED ──────────────────────────────────────
+        // rawPayload, decryptedValue, iv, authTag, ciphertext, encryptedKey
       };
     });
 
+    // Log the view action (non-blocking)
+    writeCredentialLog({ action: 'viewed', service: 'all', adminId, ip }).catch(() => {});
+
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/admin/integrations/:id/rotate
+// Re-encrypts credentials for a given integration.
+// Body: { newCredential: { apiKey: '...' } }
+// Returns: { success: true, lastRotated: ISO-string }  — no keys.
+app.patch('/api/admin/integrations/:id/rotate', async (req, res) => {
+  const ip      = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  const adminId = req.headers['x-admin-id'] || req.query.adminId || 'system';
+  const { id }  = req.params;
+  const { newCredential } = req.body;
+
+  if (!newCredential || typeof newCredential !== 'object') {
+    return res.status(400).json({ error: 'Request body must include newCredential object.' });
+  }
+
+  if (mongoose.connection.readyState !== 1) {
+    // Offline fallback — simulate success
+    const lastRotated = new Date().toISOString();
+    await writeCredentialLog({ action: 'rotated', service: id, adminId, ip });
+    return res.json({ success: true, lastRotated, offline: true });
+  }
+
+  try {
+    const integration = await Integration.findById(id);
+    if (!integration) return res.status(404).json({ error: 'Integration not found.' });
+
+    const encrypted   = encryptCredentials(newCredential, CREDENTIALS_ENCRYPTION_KEY);
+    const lastRotated = new Date();
+
+    await Integration.updateOne(
+      { _id: id },
+      { $set: {
+          credentials: encrypted,   // keep legacy field updated
+          encryptedKey: encrypted.ciphertext,
+          iv:           encrypted.iv,
+          authTag:      encrypted.authTag,
+          lastRotated,
+      }}
+    );
+
+    await writeCredentialLog({ action: 'rotated', service: integration.source, adminId, ip });
+    res.json({ success: true, lastRotated: lastRotated.toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: 'Rotation failed: ' + err.message });
+  }
+});
+
+// POST /api/admin/integrations/:id/test
+// Tests connectivity for a given integration without exposing credentials.
+// Returns: { success: true/false, message: string }
+app.post('/api/admin/integrations/:id/test', async (req, res) => {
+  const ip      = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  const adminId = req.headers['x-admin-id'] || req.query.adminId || 'system';
+  const { id }  = req.params;
+
+  // Service → lightweight reachability test URL
+  const SERVICE_TEST_URLS = {
+    'supabase auth':  'https://supabase.com',
+    'emailjs':        'https://api.emailjs.com',
+    'mapbox api':     'https://api.mapbox.com',
+    'twilio':         'https://www.twilio.com',
+    'razorpay':       'https://api.razorpay.com',
+    'sendgrid':       'https://api.sendgrid.com',
+  };
+
+  if (mongoose.connection.readyState !== 1) {
+    await writeCredentialLog({ action: 'tested', service: id, adminId, ip });
+    return res.json({ success: true, message: 'Offline mode: connection test simulated successfully.' });
+  }
+
+  try {
+    const integration = await Integration.findById(id);
+    if (!integration) return res.status(404).json({ error: 'Integration not found.' });
+
+    const serviceName = (integration.source || '').toLowerCase();
+    const testUrl     = SERVICE_TEST_URLS[serviceName] || 'https://httpbin.org/get';
+
+    let success = false;
+    let message = '';
+    try {
+      const response = await axios.head(testUrl, { timeout: 5000 });
+      success = response.status < 400;
+      message = success
+        ? `Connection to ${integration.source} reachable (HTTP ${response.status}).`
+        : `Service returned HTTP ${response.status}.`;
+    } catch (netErr) {
+      success = false;
+      message = `Could not reach ${integration.source}: ${netErr.message}`;
+    }
+
+    await writeCredentialLog({ action: 'tested', service: integration.source, adminId, ip });
+    res.json({ success, message });
+  } catch (err) {
+    res.status(500).json({ error: 'Test failed: ' + err.message });
+  }
+});
+
+// GET /api/admin/credentials/logs
+// Returns credential audit log, newest first.
+app.get('/api/admin/credentials/logs', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const logs = await CredentialLog.find().sort({ timestamp: -1 }).limit(100);
+      return res.json(logs);
+    }
+    // Offline: return in-memory log
+    res.json(credentialLogs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

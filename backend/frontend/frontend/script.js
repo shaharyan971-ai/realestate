@@ -2221,9 +2221,12 @@ async function showSecurityDashboard() {
           </div>
         </div>
 
-        <!-- API CREDENTIALS ENCRYPTION -->
+        <!-- CREDENTIAL VAULT -->
         <div style="background:#0d0f10;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px;margin-bottom:20px;">
-          <div style="font-size:0.82rem;font-weight:700;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">API Credentials Encryption</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:0.82rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;">🔐 Credential Vault</div>
+            <div style="font-size:0.6rem;color:#22c55e;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);padding:2px 7px;border-radius:999px;font-weight:700;">KEYS NEVER EXPOSED</div>
+          </div>
           <div id="integrationStatus" style="font-size:0.75rem;color:#aaa;margin-bottom:10px;line-height:1.4;">
             Loading integrations...
           </div>
@@ -2232,6 +2235,18 @@ async function showSecurityDashboard() {
             <button onclick="runEncryptionMigration()" class="btn btn-gold btn-sm" style="font-size:0.72rem;padding:4px 8px;cursor:pointer;">Run Migration</button>
           </div>
         </div>
+
+        <!-- CREDENTIAL AUDIT LOG -->
+        <div style="background:#0d0f10;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px;margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:0.82rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;">📋 Credential Audit Log</div>
+            <button onclick="loadCredentialLogs()" style="padding:2px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#888;font-size:0.65rem;cursor:pointer;">↻ Refresh</button>
+          </div>
+          <div id="credentialLogsContainer" style="font-size:0.72rem;color:#aaa;line-height:1.4;">
+            Loading audit log...
+          </div>
+        </div>
+
 
         <!-- WEBHOOKS & EVENT DISPATCH -->
         <div style="background:#0d0f10;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px;margin-bottom:20px;">
@@ -2264,6 +2279,7 @@ async function showSecurityDashboard() {
   if (rbacSelector) rbacSelector.value = user.role || 'buyer';
 
   loadIntegrationsList();
+  loadCredentialLogs();
   loadWebhookLogs();
 }
 
@@ -2291,11 +2307,14 @@ async function simulateUserRole(newRole) {
   }
 }
 
+// ─── Integration Vault UI helpers ────────────────────────────────────────────
+// NOTE: These functions never display raw API keys.
+// The backend returns only masked previews + metadata.
+
 async function seedIntegrations() {
   try {
-    const res = await fetch('http://localhost:3001/api/seed-integrations', { method: 'POST' }); // wait, or seed-integrations route path? Let's check: we defined `/api/admin/seed-integrations`
-    const res2 = await fetch('http://localhost:3001/api/admin/seed-integrations', { method: 'POST' });
-    const data = await res2.json();
+    const res  = await fetch('http://localhost:3001/api/admin/seed-integrations', { method: 'POST' });
+    const data = await res.json();
     showToast(data.message || 'Integrations seeded!', 'success');
     await loadIntegrationsList();
   } catch (err) {
@@ -2305,9 +2324,9 @@ async function seedIntegrations() {
 
 async function runEncryptionMigration() {
   try {
-    const res = await fetch('http://localhost:3001/api/admin/migrate-encrypt', { method: 'POST' });
+    const res  = await fetch('http://localhost:3001/api/admin/migrate-encrypt', { method: 'POST' });
     const data = await res.json();
-    showToast(`${data.message} Migrated: ${data.migrated}, Skipped: ${data.skipped}`, 'success');
+    showToast(`${data.message} — Migrated: ${data.migrated}, Skipped: ${data.skipped}`, 'success');
     await loadIntegrationsList();
   } catch (err) {
     showToast('Migration failed: ' + err.message, 'error');
@@ -2318,29 +2337,72 @@ async function loadIntegrationsList() {
   const container = document.getElementById('integrationStatus');
   if (!container) return;
   try {
-    const res = await fetch('http://localhost:3001/api/admin/integrations');
+    const res  = await fetch('http://localhost:3001/api/admin/integrations');
     const data = await res.json();
+
     if (!data || data.length === 0) {
-      container.innerHTML = '<div style="color:#666">No integrations seeded. Click "Seed Integrations" below.</div>';
+      container.innerHTML = '<div style="color:#666">No integrations found. Click "Seed Integrations" to add sample data.</div>';
       return;
     }
-    
-    let html = '<div style="display:flex;flex-direction:column;gap:8px;max-height:150px;overflow-y:auto;padding-right:4px;">';
+
+    let html = '<div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;padding-right:4px;">';
     data.forEach(item => {
-      const lockIcon = item.isEncrypted ? '🔒 <span style="color:#22c55e;font-weight:700;">Encrypted</span>' : '🔓 <span style="color:#f59e0b;">Plaintext (Vulnerable)</span>';
-      const displayCreds = JSON.stringify(item.decryptedValue);
-      const rawCreds = JSON.stringify(item.rawPayload);
+      const lockBadge  = item.isEncrypted
+        ? '<span style="color:#22c55e;font-weight:700;font-size:0.65rem;">🔒 ENCRYPTED</span>'
+        : '<span style="color:#f59e0b;font-weight:700;font-size:0.65rem;">🔓 PLAINTEXT</span>';
+      const statusDot  = item.status === 'connected'
+        ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:4px;"></span>'
+        : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-right:4px;"></span>';
+      const rotatedStr = item.lastRotated
+        ? new Date(item.lastRotated).toLocaleDateString()
+        : 'Never rotated';
+      const createdStr = item.createdAt
+        ? new Date(item.createdAt).toLocaleDateString()
+        : '—';
+      const expiryBadge = item.expiryWarning
+        ? `<span style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:1px 5px;font-size:0.6rem;font-weight:700;margin-left:4px;">⚠ Expires in ${item.daysUntilExpiry}d</span>`
+        : '';
+
       html += `
-        <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);padding:8px;border-radius:6px;font-size:0.72rem;line-height:1.4;">
-          <div style="display:flex;justify-content:space-between;font-weight:700;color:#e8e8e8;margin-bottom:4px;">
-            <span>${item.source}</span>
-            <span style="font-size:0.65rem;margin-left:auto;">${lockIcon}</span>
+        <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);padding:10px;border-radius:8px;font-size:0.72rem;line-height:1.5;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-weight:700;color:#e8e8e8;font-size:0.8rem;">${statusDot}${item.source}${expiryBadge}</span>
+            <span>${lockBadge}</span>
           </div>
-          <div style="color:#666;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title='Raw DB: ${rawCreds}'>
-            <strong>Raw:</strong> ${rawCreds}
+          <div style="font-family:monospace;color:#e6b94a;background:rgba(230,185,74,0.06);border:1px solid rgba(230,185,74,0.12);border-radius:4px;padding:4px 8px;margin-bottom:6px;letter-spacing:0.5px;">
+            ${item.keyPreview || '••••••••••'}
           </div>
-          <div style="color:#e6b94a;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title='Decrypted: ${displayCreds}'>
-            <strong>Decrypted:</strong> ${displayCreds}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;color:#666;font-size:0.65rem;margin-bottom:8px;">
+            <span>Added: ${createdStr}</span>
+            <span>Rotated: ${rotatedStr}</span>
+            <span>By: ${item.createdBy || 'system'}</span>
+            <span>Status: <span style="color:${item.status === 'connected' ? '#22c55e' : '#ef4444'}">${item.status}</span></span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="testCredential('${item._id}', '${item.source}')"
+              style="flex:1;padding:4px 8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:5px;color:#3b82f6;font-size:0.65rem;font-weight:700;cursor:pointer;">
+              🔌 Test
+            </button>
+            <button onclick="showRotateForm('${item._id}', '${item.source}')"
+              style="flex:1;padding:4px 8px;background:rgba(230,185,74,0.1);border:1px solid rgba(230,185,74,0.3);border-radius:5px;color:#e6b94a;font-size:0.65rem;font-weight:700;cursor:pointer;">
+              🔄 Rotate Key
+            </button>
+          </div>
+          <div id="rotateForm_${item._id}" style="display:none;margin-top:8px;">
+            <div style="font-size:0.65rem;color:#888;margin-bottom:4px;">Enter new credential value (JSON):</div>
+            <textarea id="rotateInput_${item._id}" rows="2"
+              style="width:100%;background:#111;border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#e8e8e8;font-family:monospace;font-size:0.65rem;padding:5px;resize:vertical;"
+              placeholder='{"apiKey":"new-key-here"}'></textarea>
+            <div style="display:flex;gap:5px;margin-top:5px;">
+              <button onclick="rotateCredential('${item._id}')"
+                style="flex:1;padding:4px 8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:5px;color:#ef4444;font-size:0.65rem;font-weight:700;cursor:pointer;">
+                ✓ Confirm Rotation
+              </button>
+              <button onclick="document.getElementById('rotateForm_${item._id}').style.display='none'"
+                style="padding:4px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:5px;color:#888;font-size:0.65rem;cursor:pointer;">
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -2351,6 +2413,83 @@ async function loadIntegrationsList() {
     container.innerHTML = `<div style="color:#ef4444">Error loading integrations: ${err.message}</div>`;
   }
 }
+
+function showRotateForm(id, source) {
+  const form = document.getElementById(`rotateForm_${id}`);
+  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function rotateCredential(id) {
+  const inputEl = document.getElementById(`rotateInput_${id}`);
+  if (!inputEl) return;
+  let newCredential;
+  try {
+    newCredential = JSON.parse(inputEl.value.trim());
+  } catch {
+    showToast('Invalid JSON. Example: {"apiKey":"new-value"}', 'error');
+    return;
+  }
+  try {
+    const res  = await fetch(`http://localhost:3001/api/admin/integrations/${id}/rotate`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ newCredential }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast('Rotation failed: ' + (data.error || 'Unknown error'), 'error'); return; }
+    showToast(`✅ Key rotated! Last rotated: ${new Date(data.lastRotated).toLocaleString()}`, 'success');
+    await loadIntegrationsList();
+    await loadCredentialLogs();
+  } catch (err) {
+    showToast('Rotation error: ' + err.message, 'error');
+  }
+}
+
+async function testCredential(id, source) {
+  showToast(`Testing connection to ${source}…`, 'success');
+  try {
+    const res  = await fetch(`http://localhost:3001/api/admin/integrations/${id}/test`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`✅ ${source}: ${data.message}`, 'success');
+    } else {
+      showToast(`❌ ${source}: ${data.message || data.error}`, 'error');
+    }
+    await loadCredentialLogs();
+  } catch (err) {
+    showToast(`Connection test failed: ${err.message}`, 'error');
+  }
+}
+
+async function loadCredentialLogs() {
+  const container = document.getElementById('credentialLogsContainer');
+  if (!container) return;
+  try {
+    const res  = await fetch('http://localhost:3001/api/admin/credentials/logs');
+    const data = await res.json();
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div style="color:#666">No credential activity logged yet.</div>';
+      return;
+    }
+    const ACTION_COLOR = { created: '#22c55e', rotated: '#e6b94a', deleted: '#ef4444', tested: '#3b82f6', viewed: '#888' };
+    let html = '<div style="display:flex;flex-direction:column;gap:5px;max-height:140px;overflow-y:auto;padding-right:4px;">';
+    data.forEach(log => {
+      const color   = ACTION_COLOR[log.action] || '#888';
+      const timeStr = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '—';
+      html += `
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:5px;font-size:0.67rem;">
+          <span style="color:${color};font-weight:800;text-transform:uppercase;min-width:52px;">${log.action}</span>
+          <span style="color:#e8e8e8;flex:1;">${log.service}</span>
+          <span style="color:#666;white-space:nowrap;">${log.adminId || 'system'} · ${timeStr}</span>
+        </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div style="color:#ef4444">Error loading logs: ${err.message}</div>`;
+  }
+}
+
 
 async function simulateInboundWebhook() {
   const secret = '7f5c71b12b591b61c10d3f8206d9d1c9ef00192e2124508de8a3b83981881882';
